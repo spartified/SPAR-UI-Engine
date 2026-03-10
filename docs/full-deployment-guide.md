@@ -126,11 +126,27 @@ The platform supports hot-installation of new products via metadata.
 
 ---
 
-## 7. Monitoring Deployment (Grafana)
+## 8. Monitoring Deployment (Grafana)
 
-1.  Deploy Grafana as a sidecar or a separate ECS service.
-2.  Enable **Anonymous Auth** (or OIDC) to allow the portal to embed dashboards.
-3.  Ensure the `GF_SECURITY_ALLOW_EMBEDDING` environment variable is set to `true`.
+The OAM Portal includes built-in support for embedding Grafana dashboards.
+
+### Local Deployment (Docker Compose)
+1.  **Configure Environment**: The `docker-compose.yml` already includes a `grafana` service.
+2.  **Spin up Containers**: Run `docker-compose up -d`.
+3.  **Automatic Provisioning**:
+    *   **Data Source**: A MySQL data source ("OAM_DB") is automatically created via `grafana/provisioning/datasources/datasource.yml`.
+    *   **Dashboard**: A sample "Framework Overview" dashboard is automatically loaded from `grafana/provisioning/dashboards/sample-dashboard.json`.
+4.  **Access**:
+    *   Grafana UI: `http://localhost:3001` (Admin user not required for viewing if anonymous auth is enabled).
+    *   Portal Integration: Navigate to **Monitor > Grafana** in the portal UI.
+
+### Production (ECS)
+1.  Deploy Grafana as a separate ECS service.
+2.  **Environment Variables**: Ensure the following are set in your Task Definition:
+    *   `GF_SECURITY_ALLOW_EMBEDDING`: `true`
+    *   `GF_AUTH_ANONYMOUS_ENABLED`: `true` (if embedding without OIDC)
+    *   `GF_AUTH_ANONYMOUS_ORG_ROLE`: `Viewer`
+3.  **CORS/Domain**: If the portal and Grafana are on different domains, ensure appropriate cookie/security settings are configured.
 
 ---
 

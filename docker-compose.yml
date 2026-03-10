@@ -22,9 +22,10 @@ services:
       - KEYCLOAK_ID=nextjs-app
       - KEYCLOAK_SECRET=dummy-secret
       - KEYCLOAK_ISSUER=http://207.180.220.203:8080/realms/spartified
-      - NEXT_PUBLIC_GRAFANA_URL=https://play.grafana.org/d-solo/000000012/grafana-play-home?orgId=1&panelId=2
+      - NEXT_PUBLIC_GRAFANA_URL=http://localhost:3001/d-solo/sample/framework-overview?orgId=1&panelId=2&refresh=5s&theme=dark
     depends_on:
       - keycloak
+      - grafana
     extra_hosts:
       - "host.docker.internal:host-gateway"
     restart: always
@@ -45,4 +46,18 @@ services:
       - KEYCLOAK_ADMIN_PASSWORD=admin
     extra_hosts:
       - "host.docker.internal:host-gateway"
+    restart: always
+
+  grafana:
+    image: grafana/grafana-oss:latest
+    container_name: grafana
+    ports:
+      - "3001:3000"
+    environment:
+      - GF_SECURITY_ALLOW_EMBEDDING=true
+      - GF_AUTH_ANONYMOUS_ENABLED=true
+      - GF_AUTH_ANONYMOUS_ORG_ROLE=Admin
+      - GF_INSTALL_PLUGINS=grafana-clock-panel,grafana-simple-json-datasource
+    volumes:
+      - ./grafana/provisioning:/etc/grafana/provisioning
     restart: always

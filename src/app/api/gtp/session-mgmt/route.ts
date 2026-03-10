@@ -55,6 +55,7 @@ export async function POST(req: NextRequest) {
             const meta = schema.metadataConfig;
             let finalData = { ...data };
             if (meta?.updatedByField) finalData[meta.updatedByField] = (session.user as any).email || (session.user as any).name;
+            if (meta?.updatedAtField) finalData[meta.updatedAtField] = new Date();
             if (meta?.lastActionField) finalData[meta.lastActionField] = 'I';
 
             const keys = Object.keys(finalData);
@@ -99,6 +100,7 @@ export async function PUT(req: NextRequest) {
             const meta = schema.metadataConfig;
             let finalData = { ...data };
             if (meta?.updatedByField) finalData[meta.updatedByField] = (session.user as any).email || (session.user as any).name;
+            if (meta?.updatedAtField) finalData[meta.updatedAtField] = new Date();
             if (meta?.lastActionField) finalData[meta.lastActionField] = 'U';
 
             const setClause = Object.keys(finalData).map(key => `\`${key}\` = ?`).join(', ');
@@ -151,6 +153,10 @@ export async function DELETE(req: NextRequest) {
                 if (meta.updatedByField) {
                     setParts.push(`\`${meta.updatedByField}\` = ?`);
                     setValues.push((session.user as any).email || (session.user as any).name);
+                }
+                if (meta.updatedAtField) {
+                    setParts.push(`\`${meta.updatedAtField}\` = ?`);
+                    setValues.push(new Date());
                 }
                 sql = `UPDATE ${schema.tableName} SET ${setParts.join(', ')} WHERE ${whereClause}`;
                 execValues = [...setValues, ...whereValues];
