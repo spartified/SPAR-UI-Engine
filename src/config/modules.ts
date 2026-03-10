@@ -12,11 +12,12 @@ export interface ModuleDefinition {
     id: string;
     title: string;
     path: string;
-    category: 'Dashboard' | 'GTP Proxy' | 'Reports' | 'Monitor' | 'User Management' | 'Audit Trail' | 'Configuration';
+    category: 'Dashboard' | 'GTP Proxy' | 'Reports' | 'Monitoring' | 'User Management' | 'Audit Trail' | 'Configuration';
     icon?: React.ReactNode;
     permission: string;
     schema?: string;
     dbPool?: string;
+    externalUrl?: string;
 }
 
 
@@ -92,11 +93,28 @@ export const MODULE_REGISTRY: ModuleDefinition[] = [
         dbPool: 'CORE'
     },
     {
-        id: 'grafana',
-        title: 'Grafana',
-        path: '/monitor/grafana',
-        category: 'Monitor',
-        permission: 'grafana'
+        id: 'monitor-server',
+        title: 'Server Monitoring',
+        path: '/monitor/server',
+        category: 'Monitoring',
+        permission: 'grafana',
+        externalUrl: process.env.NEXT_PUBLIC_GRAFANA_URL_SERVER
+    },
+    {
+        id: 'monitor-database',
+        title: 'Database Monitoring',
+        path: '/monitor/database',
+        category: 'Monitoring',
+        permission: 'grafana',
+        externalUrl: process.env.NEXT_PUBLIC_GRAFANA_URL_DB
+    },
+    {
+        id: 'monitor-app',
+        title: 'Application Metrics',
+        path: '/monitor/application',
+        category: 'Monitoring',
+        permission: 'grafana',
+        externalUrl: process.env.NEXT_PUBLIC_GRAFANA_URL_APP
     }
 ];
 
@@ -107,6 +125,6 @@ export const CATEGORIES = [
     { id: 'GTP Proxy', title: 'GTP Proxy', icon: React.createElement(GlobalOutlined) },
     { id: 'User Management', title: 'User Management', icon: React.createElement(TeamOutlined) },
     { id: 'Audit Trail', title: 'Audit Trail', icon: React.createElement(HistoryOutlined) },
-    { id: 'Monitor', title: 'Monitor Platform', icon: React.createElement(GlobalOutlined) }
+    { id: 'Monitoring', title: 'Monitoring', icon: React.createElement(GlobalOutlined) }
 ];
 

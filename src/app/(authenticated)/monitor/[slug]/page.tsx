@@ -1,42 +1,52 @@
 "use client";
-import { useEffect, useState } from 'react';
 import { useAuth } from '@/core/auth/AuthProvider';
 import { Result, Button, Spin } from 'antd';
 import { brandingConfig } from '@/branding.config';
+import { MODULE_REGISTRY } from '@/config/modules';
+import { usePathname } from 'next/navigation';
+import { useEffect, useState } from 'react';
 
-export default function GrafanaPage() {
+export default function DynamicMonitorPage() {
     const { user } = useAuth();
+    const pathname = usePathname();
     const [loading, setLoading] = useState(true);
 
+    const currentModule = MODULE_REGISTRY.find(m => m.path === pathname);
+
     useEffect(() => {
-        // Simulate loading external content
+        setLoading(true);
         const timer = setTimeout(() => {
             setLoading(false);
-        }, 1500);
+        }, 1000);
         return () => clearTimeout(timer);
-    }, []);
+    }, [pathname]);
 
-    if (!user?.permissions?.includes('grafana')) {
+    if (!currentModule || !user?.permissions?.includes(currentModule.permission)) {
         return (
             <Result
                 status="403"
                 title="403"
-                subTitle="Sorry, you are not authorized to access the Grafana Monitor Platform."
-                extra={<Button type="primary">Back Home</Button>}
+                subTitle="Sorry, you are not authorized to access this Monitoring dashboard."
+                extra={<Button type="primary" href="/dashboard">Back Home</Button>}
             />
         );
     }
 
-    const grafanaUrl = process.env.NEXT_PUBLIC_GRAFANA_URL || "https://play.grafana.org/d-solo/000000012/grafana-play-home?orgId=1&panelId=2";
+    const finalUrl = currentModule.externalUrl;
 
-    // Append theme=dark if not present (simple check)
-    const finalUrl = grafanaUrl.includes('?')
-        ? `${grafanaUrl}&theme=dark`
-        : `${grafanaUrl}?theme=dark`;
+    if (!finalUrl) {
+        return (
+            <Result
+                status="warning"
+                title="Configuration Missing"
+                subTitle={`No external URL configured for ${currentModule.title}. Please check your environment variables.`}
+            />
+        );
+    }
 
     return (
         <div style={{ height: 'calc(100vh - 120px)', display: 'flex', flexDirection: 'column' }}>
-            <h1 style={{ marginBottom: 16 }}>Grafana Monitor Platform</h1>
+            <h1 style={{ marginBottom: 16 }}>{currentModule.title}</h1>
 
             {loading ? (
                 <div style={{ flex: 1, display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
@@ -53,7 +63,7 @@ export default function GrafanaPage() {
                 }}>
                     <iframe
                         src={finalUrl}
-                        title="Grafana Dashboard"
+                        title={currentModule.title}
                         width="100%"
                         height="100%"
                         frameBorder="0"

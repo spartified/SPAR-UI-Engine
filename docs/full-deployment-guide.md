@@ -126,27 +126,33 @@ The platform supports hot-installation of new products via metadata.
 
 ---
 
-## 8. Monitoring Deployment (Grafana)
+## 8. Monitoring (Grafana)
 
-The OAM Portal includes built-in support for embedding Grafana dashboards.
+The OAM Portal supports embedding multiple Grafana dashboards. Monitoring links are managed via the `MODULE_REGISTRY` in `src/config/modules.ts`.
 
-### Local Deployment (Docker Compose)
-1.  **Configure Environment**: The `docker-compose.yml` already includes a `grafana` service.
-2.  **Spin up Containers**: Run `docker-compose up -d`.
-3.  **Automatic Provisioning**:
-    *   **Data Source**: A MySQL data source ("OAM_DB") is automatically created via `grafana/provisioning/datasources/datasource.yml`.
-    *   **Dashboard**: A sample "Framework Overview" dashboard is automatically loaded from `grafana/provisioning/dashboards/sample-dashboard.json`.
-4.  **Access**:
-    *   Grafana UI: `http://localhost:3001` (Admin user not required for viewing if anonymous auth is enabled).
-    *   Portal Integration: Navigate to **Monitor > Grafana** in the portal UI.
+### Independent Grafana Setup
+Gravity OAM is designed to work with an independent Grafana installation (e.g., hosted on a separate server or managed service).
 
-### Production (ECS)
-1.  Deploy Grafana as a separate ECS service.
-2.  **Environment Variables**: Ensure the following are set in your Task Definition:
-    *   `GF_SECURITY_ALLOW_EMBEDDING`: `true`
-    *   `GF_AUTH_ANONYMOUS_ENABLED`: `true` (if embedding without OIDC)
-    *   `GF_AUTH_ANONYMOUS_ORG_ROLE`: `Viewer`
-3.  **CORS/Domain**: If the portal and Grafana are on different domains, ensure appropriate cookie/security settings are configured.
+1.  **Grafana Configuration**:
+    *   Set `GF_SECURITY_ALLOW_EMBEDDING=true`.
+    *   Enable Anonymous Auth if desired: `GF_AUTH_ANONYMOUS_ENABLED=true`.
+
+2.  **Portal Configuration**:
+    Configure the following environment variables in your deployment (e.g., ECS, Docker Compose) to point to your specific Grafana Solo panels:
+
+    ```bash
+    NEXT_PUBLIC_GRAFANA_URL_SERVER=https://grafana.example.com/d-solo/server/...
+    NEXT_PUBLIC_GRAFANA_URL_DB=https://grafana.example.com/d-solo/db/...
+    NEXT_PUBLIC_GRAFANA_URL_APP=https://grafana.example.com/d-solo/app/...
+    ```
+
+3.  **UI Navigation**:
+    The framework now includes a "Monitoring" section with links for:
+    *   **Server Monitoring**
+    *   **Database Monitoring**
+    *   **Application Metrics**
+
+    Each link dynamically renders an iframe using the URLs specified above.
 
 ---
 
