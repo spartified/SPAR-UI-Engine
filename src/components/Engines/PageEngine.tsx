@@ -13,11 +13,15 @@ export type WidgetType = 'statistic' | 'chart' | 'table' | 'text';
 export interface BaseWidget {
     type: WidgetType;
     title?: string;
+    dataSource?: {
+        dbPool: string;
+        query: string;
+    };
 }
 
 export interface StatisticWidget extends BaseWidget {
     type: 'statistic';
-    value: string | number;
+    value?: string | number;
     prefixIcon?: string;
     suffix?: string;
     precision?: number;
@@ -28,7 +32,7 @@ export interface ChartWidget extends BaseWidget {
     type: 'chart';
     chartType: 'line' | 'bar' | 'pie';
     xAxis?: string[];
-    series: {
+    series?: {
         name: string;
         data: number[];
     }[];
@@ -38,12 +42,12 @@ export interface ChartWidget extends BaseWidget {
 export interface TableWidget extends BaseWidget {
     type: 'table';
     columns: { title: string; dataIndex: string; key: string }[];
-    data: any[];
+    data?: any[];
 }
 
 export interface TextWidget extends BaseWidget {
     type: 'text';
-    content: string;
+    content?: string;
 }
 
 export type WidgetConfig = StatisticWidget | ChartWidget | TableWidget | TextWidget;
@@ -61,7 +65,6 @@ export interface RowConfig {
 
 // --- Filter Types ---
 
-// Re-export or redefine if needed, but for simplicity let's define inline or import
 interface FilterConfig {
     key: string;
     type: 'dateRange' | 'select';
@@ -83,6 +86,7 @@ export interface PageSchema {
 interface WidgetRendererProps<T extends WidgetConfig> {
     widget: T;
     filters?: Record<string, any>;
+    data?: any;
 }
 
 const renderIcon = (iconName?: string, color?: string) => {
@@ -95,27 +99,51 @@ const renderIcon = (iconName?: string, color?: string) => {
     return null;
 };
 
-const StatisticRenderer = ({ widget, filters }: WidgetRendererProps<StatisticWidget>) => (
-    <Card bordered={false} style={{ background: brandingConfig.theme.componentBg, height: '100%' }}>
-        <Statistic
-            title={<span style={{ color: brandingConfig.theme.textColor }}>{widget.title}</span>}
-            value={widget.value}
-            precision={widget.precision}
-            valueStyle={{ color: brandingConfig.theme.textColor }}
-            prefix={renderIcon(widget.prefixIcon, widget.color)}
-            suffix={widget.suffix}
-        />
-    </Card>
-);
+const StatisticRenderer = ({ widget, data }: WidgetRendererProps<StatisticWidget>) => {
+    const displayValue = data !== undefined ? data : widget.value;
+    return (
+        <Card bordered={false} style={{ background: brandingConfig.theme.componentBg, height: '100%' }}>
+            <Statistic
+                title={<span style={{ color: brandingConfig.theme.textColor }}>{widget.title}</span>}
+                value={displayValue}
+                precision={widget.precision}
+                valueStyle={{ color: brandingConfig.theme.textColor }}
+                prefix={renderIcon(widget.prefixIcon, widget.color)}
+                suffix={widget.suffix}
+            />
+        </Card>
+    );
+};
 
-const ChartRenderer = ({ widget, filters }: WidgetRendererProps<ChartWidget>) => {
-    // Example: Use filters to modify title or data (mocking DB query)
+const ChartRenderer = ({ widget, filters, data }: WidgetRendererProps<ChartWidget>) => {
     const titleSuffix = filters?.dateRange ? ` (${dayjs(filters.dateRange[0]).format('MM/DD')} - ${dayjs(filters.dateRange[1]).format('MM/DD')})` : '';
+
+    // If we have dynamic data, we need to transform it
+    let xAxis = widget.xAxis;
+    let series = widget.series || [];
+
+    if (data && Array.isArray(data)) {
+        // Assume data format: [{ x_axis: '...', series1: ..., series2: ... }]
+        xAxis = Array.from(new Set(data.map(item => item.x_axis || item.name)));
+
+        // Identify series columns (everything except x_axis/name)
+        const sample = data[0] || {};
+        const seriesKeys = Object.keys(sample).filter(k => k !== 'x_axis' && k !== 'name');
+
+        series = seriesKeys.map(key => ({
+            name: key.replace(/_/g, ' ').toUpperCase(),
+            data: data.map(item => Number(item[key]))
+        }));
+    }
 
     const option = {
         title: {
             text: widget.title + titleSuffix,
             textStyle: { color: brandingConfig.theme.textColor }
+        },
+        legend: {
+            textStyle: { color: brandingConfig.theme.textColor },
+            bottom: 0
         },
         toolbox: {
             feature: {
@@ -136,12 +164,12 @@ const ChartRenderer = ({ widget, filters }: WidgetRendererProps<ChartWidget>) =>
         grid: {
             left: '3%',
             right: '4%',
-            bottom: '3%',
+            bottom: '10%',
             containLabel: true
         },
         xAxis: widget.chartType === 'pie' ? undefined : {
             type: 'category',
-            data: widget.xAxis || [],
+            data: xAxis || [],
             axisLabel: { color: brandingConfig.theme.textColor },
             axisLine: { lineStyle: { color: brandingConfig.theme.textColor } }
         },
@@ -150,11 +178,12 @@ const ChartRenderer = ({ widget, filters }: WidgetRendererProps<ChartWidget>) =>
             axisLabel: { color: brandingConfig.theme.textColor },
             splitLine: { lineStyle: { color: '#333' } }
         },
-        series: widget.series.map(s => ({
+        series: series.map((s, index) => ({
             name: s.name,
             type: widget.chartType,
             data: s.data,
-            itemStyle: { color: brandingConfig.theme.primaryColor }
+            // Cycle colors if many series
+            itemStyle: index === 0 ? { color: brandingConfig.theme.primaryColor } : undefined
         }))
     };
 
@@ -188,12 +217,13 @@ const downloadCSV = (data: any[], columns: { title: string; dataIndex: string }[
     document.body.removeChild(link);
 };
 
-const TableRenderer = ({ widget, filters }: WidgetRendererProps<TableWidget>) => {
+const TableRenderer = ({ widget, data }: WidgetRendererProps<TableWidget>) => {
+    const displayData = data || widget.data || [];
     // Process columns to add sorting and filtering
     const processedColumns = widget.columns.map((col, index) => {
         // Generate filters from data
-        const uniqueValues = Array.from(new Set(widget.data.map(item => item[col.dataIndex]))).filter(Boolean);
-        const filters = uniqueValues.map(val => ({ text: String(val), value: val }));
+        const uniqueValues = Array.from(new Set(displayData.map((item: any) => item[col.dataIndex]))).filter(Boolean);
+        const filters = uniqueValues.map(val => ({ text: String(val), value: val as any }));
 
         return {
             ...col,
@@ -223,37 +253,37 @@ const TableRenderer = ({ widget, filters }: WidgetRendererProps<TableWidget>) =>
             extra={
                 <Icons.DownloadOutlined
                     style={{ color: brandingConfig.theme.primaryColor, cursor: 'pointer', fontSize: 18 }}
-                    onClick={() => downloadCSV(widget.data, widget.columns, widget.title || 'export')}
+                    onClick={() => downloadCSV(displayData, widget.columns, widget.title || 'export')}
                 />
             }
         >
             <Table
                 columns={processedColumns}
-                dataSource={widget.data}
+                dataSource={displayData}
                 pagination={false}
-                rowKey="id"
+                rowKey={(record, index) => record.id || index}
                 scroll={{ x: 'max-content' }} // Ensure table is scrollable if many columns
             />
         </Card>
     );
 };
 
-const TextRenderer = ({ widget, filters }: WidgetRendererProps<TextWidget>) => (
+const TextRenderer = ({ widget }: WidgetRendererProps<TextWidget>) => (
     <Card title={<span style={{ color: brandingConfig.theme.textColor }}>{widget.title}</span>} bordered={false} style={{ background: brandingConfig.theme.componentBg }}>
         <p style={{ color: brandingConfig.theme.textColor }}>{widget.content}</p>
     </Card>
 );
 
-const WidgetFactory = ({ widget, filters }: { widget: WidgetConfig; filters?: Record<string, any> }) => {
+const WidgetFactory = ({ widget, filters, data }: { widget: WidgetConfig; filters?: Record<string, any>; data?: any }) => {
     switch (widget.type) {
         case 'statistic':
-            return <StatisticRenderer widget={widget} />;
+            return <StatisticRenderer widget={widget} data={data} />;
         case 'chart':
-            return <ChartRenderer widget={widget} filters={filters} />;
+            return <ChartRenderer widget={widget} filters={filters} data={data} />;
         case 'table':
-            return <TableRenderer widget={widget} filters={filters} />;
+            return <TableRenderer widget={widget} data={data} />;
         case 'text':
-            return <TextRenderer widget={widget} filters={filters} />;
+            return <TextRenderer widget={widget} />;
         default:
             return <div>Unknown Widget Type</div>;
     }
@@ -263,16 +293,84 @@ const WidgetFactory = ({ widget, filters }: { widget: WidgetConfig; filters?: Re
 // --- Main Engine ---
 
 import { FilterEngine } from './FilterEngine';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 
 export const PageEngine = ({ schema }: { schema: PageSchema }) => {
     const [filterValues, setFilterValues] = useState<Record<string, any>>({});
+    const [widgetData, setWidgetData] = useState<Record<string, any>>({});
+    const [loading, setLoading] = useState(false);
 
     const handleFilterChange = (newValues: Record<string, any>) => {
         setFilterValues(prev => ({ ...prev, ...newValues }));
-        console.log("Filters Updated:", { ...filterValues, ...newValues });
-        // In a real app, this would trigger a data refetch or refilter logic here.
     };
+
+    const fetchWidgetData = async () => {
+        setLoading(true);
+        const newData: Record<string, any> = {};
+
+        // Iterate through all widgets in all rows
+        for (let rIndex = 0; rIndex < schema.rows.length; rIndex++) {
+            const row = schema.rows[rIndex];
+            for (let cIndex = 0; cIndex < row.columns.length; cIndex++) {
+                const widget = row.columns[cIndex].widget;
+
+                if (widget.dataSource) {
+                    const widgetKey = `${rIndex}-${cIndex}`;
+                    try {
+                        // SQL Parameter Substitution
+                        let query = widget.dataSource.query;
+
+                        // Handle Date Range
+                        if (filterValues.dateRange) {
+                            const start = dayjs(filterValues.dateRange[0]).format('YYYY-MM-DD');
+                            const end = dayjs(filterValues.dateRange[1]).format('YYYY-MM-DD');
+                            query = query.replace(/:start/g, `'${start}'`).replace(/:end/g, `'${end}'`);
+                        }
+
+                        // Handle other filter keys like :hpmn, :vpmn
+                        Object.entries(filterValues).forEach(([key, value]) => {
+                            if (key !== 'dateRange' && value !== undefined && value !== null) {
+                                query = query.replace(new RegExp(`:${key}`, 'g'), Array.isArray(value) ? value.map(v => `'${v}'`).join(',') : `'${value}'`);
+                            } else if (value === null || value === undefined) {
+                                // If filter is cleared, use a wildcard or handle depending on SQL logic
+                                // For now, we assume queries use something like (nwid = :nwid OR :nwid IS NULL)
+                                query = query.replace(new RegExp(`:${key}`, 'g'), 'NULL');
+                            }
+                        });
+
+                        const response = await fetch('/api/lookup', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({
+                                dbPool: widget.dataSource.dbPool,
+                                query
+                            }),
+                        });
+
+                        if (response.ok) {
+                            const result = await response.json();
+                            // For statistics, take the first value of the first row
+                            if (widget.type === 'statistic' && Array.isArray(result) && result.length > 0) {
+                                newData[widgetKey] = Object.values(result[0])[0];
+                            } else {
+                                newData[widgetKey] = result;
+                            }
+                        }
+                    } catch (error) {
+                        console.error(`Failed to fetch data for widget ${widgetKey}:`, error);
+                    }
+                }
+            }
+        }
+        setWidgetData(newData);
+        setLoading(false);
+    };
+
+    useEffect(() => {
+        if (Object.keys(filterValues).length > 0) {
+            fetchWidgetData();
+        }
+    }, [filterValues]);
 
     return (
         <div style={{ padding: 24, height: '100%', display: 'flex', flexDirection: 'column' }}>
@@ -282,7 +380,7 @@ export const PageEngine = ({ schema }: { schema: PageSchema }) => {
 
             {schema.filters && schema.filters.length > 0 && (
                 <FilterEngine
-                    filters={schema.filters}
+                    filters={schema.filters as any}
                     onFilterChange={handleFilterChange}
                 />
             )}
@@ -292,7 +390,11 @@ export const PageEngine = ({ schema }: { schema: PageSchema }) => {
                     <Row key={rIndex} gutter={row.gutter || 16}>
                         {row.columns.map((col, cIndex) => (
                             <Col key={cIndex} span={col.span}>
-                                <WidgetFactory widget={col.widget} filters={filterValues} />
+                                <WidgetFactory
+                                    widget={col.widget}
+                                    filters={filterValues}
+                                    data={widgetData[`${rIndex}-${cIndex}`]}
+                                />
                             </Col>
                         ))}
                     </Row>

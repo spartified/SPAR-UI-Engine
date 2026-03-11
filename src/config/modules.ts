@@ -39,6 +39,14 @@ export const MODULE_REGISTRY: ModuleDefinition[] = [
         schema: '/schemas/kpi-report-v2.json'
     },
     {
+        id: 'gtp-session-stats',
+        title: 'GTP Session Stats',
+        path: '/reports/gtp-session-stats',
+        category: 'Reports',
+        permission: 'report:gtp:read',
+        schema: '/schemas/gtp-session-stats.json'
+    },
+    {
         id: 'node-config',
         title: 'Network Nodes',
         path: '/configuration/nodes',

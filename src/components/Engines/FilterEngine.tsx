@@ -18,6 +18,10 @@ export interface FilterConfig {
     defaultValue?: any;
     options?: { label: string; value: any }[]; // For select
     dataSource?: string; // API endpoint for dynamic options
+    lookup?: {
+        dbPool: string;
+        query: string;
+    };
     placeholder?: string;
 }
 
@@ -48,54 +52,78 @@ export const FilterEngine = ({ filters, onFilterChange }: FilterEngineProps) => 
     React.useEffect(() => {
         const initialValues: Record<string, any> = {};
 
-        filters.forEach(filter => {
-            // Handle Default Values
-            if (filter.defaultValue) {
-                if (filter.type === 'dateRange') {
-                    if (filter.defaultValue === 'yesterday') {
-                        initialValues[filter.key] = [dayjs().subtract(1, 'day'), dayjs().subtract(1, 'day')];
-                    } else if (filter.defaultValue === 'last7Days') {
-                        initialValues[filter.key] = [dayjs().subtract(6, 'day'), dayjs()];
-                    } else if (filter.defaultValue === 'thisMonth') {
-                        initialValues[filter.key] = [dayjs().startOf('month'), dayjs().endOf('month')];
+        const fetchLookups = async () => {
+            for (const filter of filters) {
+                // Handle Default Values
+                if (filter.defaultValue) {
+                    if (filter.type === 'dateRange') {
+                        if (filter.defaultValue === 'yesterday') {
+                            initialValues[filter.key] = [dayjs().subtract(1, 'day'), dayjs().subtract(1, 'day')];
+                        } else if (filter.defaultValue === 'last7Days') {
+                            initialValues[filter.key] = [dayjs().subtract(6, 'day'), dayjs()];
+                        } else if (filter.defaultValue === 'thisMonth') {
+                            initialValues[filter.key] = [dayjs().startOf('month'), dayjs().endOf('month')];
+                        }
+                    } else {
+                        initialValues[filter.key] = filter.defaultValue;
                     }
-                } else {
-                    initialValues[filter.key] = filter.defaultValue;
+                }
+
+                // Handle SQL-backed Lookups
+                if (filter.type === 'select' && filter.lookup) {
+                    try {
+                        const response = await fetch('/api/lookup', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify(filter.lookup),
+                        });
+                        if (response.ok) {
+                            const result = await response.json();
+                            setDynamicOptions(prev => ({
+                                ...prev,
+                                [filter.key]: result
+                            }));
+                        }
+                    } catch (error) {
+                        console.error(`Failed to fetch lookup for filter ${filter.key}:`, error);
+                    }
+                }
+
+                // Handle Dynamic Options (Legacy Mock)
+                else if (filter.type === 'select' && filter.dataSource) {
+                    // Simulate API call based on dataSource
+                    console.log(`Fetching options for ${filter.key} from ${filter.dataSource}`);
+                    setTimeout(() => {
+                        const mockData = filter.dataSource === '/api/regions'
+                            ? [
+                                { label: 'North Region', value: 'north' },
+                                { label: 'South Region', value: 'south' },
+                                { label: 'East Region', value: 'east' },
+                                { label: 'West Region', value: 'west' },
+                            ]
+                            : [];
+                        setDynamicOptions(prev => ({ ...prev, [filter.key]: mockData }));
+                    }, 500);
                 }
             }
 
-            // Handle Dynamic Options (Mock Fetch)
-            if (filter.type === 'select' && filter.dataSource) {
-                // Simulate API call based on dataSource
-                console.log(`Fetching options for ${filter.key} from ${filter.dataSource}`);
-                setTimeout(() => {
-                    const mockData = filter.dataSource === '/api/regions'
-                        ? [
-                            { label: 'North Region', value: 'north' },
-                            { label: 'South Region', value: 'south' },
-                            { label: 'East Region', value: 'east' },
-                            { label: 'West Region', value: 'west' },
-                        ]
-                        : [];
-                    setDynamicOptions(prev => ({ ...prev, [filter.key]: mockData }));
-                }, 500);
+            // Set initial values and notify parent
+            if (Object.keys(initialValues).length > 0) {
+                setFilterValues(initialValues);
+                // We need to convert Dayjs to strings for the parent callback to match protocol
+                const formattedValues: Record<string, any> = {};
+                Object.entries(initialValues).forEach(([k, v]) => {
+                    if (Array.isArray(v) && dayjs.isDayjs(v[0])) {
+                        formattedValues[k] = [v[0].toISOString(), v[1].toISOString()];
+                    } else {
+                        formattedValues[k] = v;
+                    }
+                });
+                onFilterChange(formattedValues);
             }
-        });
+        };
 
-        // Set initial values and notify parent
-        if (Object.keys(initialValues).length > 0) {
-            setFilterValues(initialValues);
-            // We need to convert Dayjs to strings for the parent callback to match protocol
-            const formattedValues: Record<string, any> = {};
-            Object.entries(initialValues).forEach(([k, v]) => {
-                if (Array.isArray(v) && dayjs.isDayjs(v[0])) {
-                    formattedValues[k] = [v[0].toISOString(), v[1].toISOString()];
-                } else {
-                    formattedValues[k] = v;
-                }
-            });
-            onFilterChange(formattedValues);
-        }
+        fetchLookups();
     }, []); // Run once on mount
 
     const handleDateChange = (key: string, dates: any) => {
