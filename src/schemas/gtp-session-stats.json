@@ -35,7 +35,7 @@
                     "span": 12,
                     "widget": {
                         "type": "chart",
-                        "title": "Session Trend (Time)",
+                        "title": "Session Stats (Time)",
                         "chartType": "line",
                         "dataSource": {
                             "dbPool": "GTP_PROXY",
@@ -47,39 +47,11 @@
                     "span": 12,
                     "widget": {
                         "type": "chart",
-                        "title": "Failure Breakdown (Time)",
-                        "chartType": "bar",
-                        "dataSource": {
-                            "dbPool": "GTP_PROXY",
-                            "query": "SELECT IF(DATEDIFF(:end, :start) < 30, DATE_FORMAT(day, '%Y-%m-%d'), DATE_FORMAT(day, '%Y-%m')) as x_axis, SUM(IF(error_code>0, sess_count, 0)) as total_failures FROM gtp_session_stats WHERE day BETWEEN :start AND :end AND (home_nwid = :hpmn OR :hpmn IS NULL) AND (vpmn_nwid = :vpmn OR :vpmn IS NULL) GROUP BY x_axis ORDER BY x_axis"
-                        }
-                    }
-                }
-            ]
-        },
-        {
-            "columns": [
-                {
-                    "span": 12,
-                    "widget": {
-                        "type": "chart",
                         "title": "Session Stats by VPMN",
                         "chartType": "bar",
                         "dataSource": {
                             "dbPool": "GTP_PROXY",
                             "query": "SELECT nm.network_name as x_axis, SUM(gs.sess_count) as total_sessions, SUM(IF(gs.error_code=0, gs.sess_count, 0)) as success_count, SUM(IF(gs.error_code>0, gs.sess_count, 0)) as fail_count, SUM(IF(gs.error_code=-1, gs.sess_count, 0)) as rejected_count FROM gtp_session_stats gs JOIN oam_portal.network_master nm ON gs.vpmn_nwid = nm.network_id WHERE gs.day BETWEEN :start AND :end AND (gs.home_nwid = :hpmn OR :hpmn IS NULL) AND (gs.vpmn_nwid = :vpmn OR :vpmn IS NULL) GROUP BY nm.network_name"
-                        }
-                    }
-                },
-                {
-                    "span": 12,
-                    "widget": {
-                        "type": "chart",
-                        "title": "Failures by VPMN",
-                        "chartType": "bar",
-                        "dataSource": {
-                            "dbPool": "GTP_PROXY",
-                            "query": "SELECT nm.network_name as x_axis, SUM(IF(gs.error_code>0, gs.sess_count, 0)) as total_failures FROM gtp_session_stats gs JOIN oam_portal.network_master nm ON gs.vpmn_nwid = nm.network_id WHERE gs.day BETWEEN :start AND :end AND (gs.home_nwid = :hpmn OR :hpmn IS NULL) AND (gs.vpmn_nwid = :vpmn OR :vpmn IS NULL) GROUP BY nm.network_name"
                         }
                     }
                 }
@@ -103,11 +75,11 @@
                     "span": 12,
                     "widget": {
                         "type": "chart",
-                        "title": "Failures by PGW IP",
+                        "title": "Session Stats by APN",
                         "chartType": "bar",
                         "dataSource": {
                             "dbPool": "GTP_PROXY",
-                            "query": "SELECT pgw_ip as x_axis, SUM(IF(error_code>0, sess_count, 0)) as total_failures FROM gtp_session_stats WHERE day BETWEEN :start AND :end AND (home_nwid = :hpmn OR :hpmn IS NULL) AND (vpmn_nwid = :vpmn OR :vpmn IS NULL) GROUP BY pgw_ip"
+                            "query": "SELECT apn as x_axis, SUM(sess_count) as total_sessions, SUM(IF(error_code=0, sess_count, 0)) as success_count, SUM(IF(error_code>0, sess_count, 0)) as fail_count, SUM(IF(error_code=-1, sess_count, 0)) as rejected_count FROM gtp_session_stats WHERE day BETWEEN :start AND :end AND (home_nwid = :hpmn OR :hpmn IS NULL) AND (vpmn_nwid = :vpmn OR :vpmn IS NULL) GROUP BY apn"
                         }
                     }
                 }
@@ -119,11 +91,39 @@
                     "span": 12,
                     "widget": {
                         "type": "chart",
-                        "title": "Session Stats by APN",
+                        "title": "Failure Breakdown (Time)",
                         "chartType": "bar",
                         "dataSource": {
                             "dbPool": "GTP_PROXY",
-                            "query": "SELECT apn as x_axis, SUM(sess_count) as total_sessions, SUM(IF(error_code=0, sess_count, 0)) as success_count, SUM(IF(error_code>0, sess_count, 0)) as fail_count, SUM(IF(error_code=-1, sess_count, 0)) as rejected_count FROM gtp_session_stats WHERE day BETWEEN :start AND :end AND (home_nwid = :hpmn OR :hpmn IS NULL) AND (vpmn_nwid = :vpmn OR :vpmn IS NULL) GROUP BY apn"
+                            "query": "SELECT IF(DATEDIFF(:end, :start) < 30, DATE_FORMAT(day, '%Y-%m-%d'), DATE_FORMAT(day, '%Y-%m')) as x_axis, SUM(IF(error_code=1, sess_count, 0)) as error_1, SUM(IF(error_code=2, sess_count, 0)) as error_2, SUM(IF(error_code=3, sess_count, 0)) as error_3 FROM gtp_session_stats WHERE day BETWEEN :start AND :end AND (home_nwid = :hpmn OR :hpmn IS NULL) AND (vpmn_nwid = :vpmn OR :vpmn IS NULL) GROUP BY x_axis ORDER BY x_axis"
+                        }
+                    }
+                },
+                {
+                    "span": 12,
+                    "widget": {
+                        "type": "chart",
+                        "title": "Failures by VPMN",
+                        "chartType": "bar",
+                        "dataSource": {
+                            "dbPool": "GTP_PROXY",
+                            "query": "SELECT nm.network_name as x_axis, SUM(IF(gs.error_code=1, gs.sess_count, 0)) as error_1, SUM(IF(gs.error_code=2, gs.sess_count, 0)) as error_2, SUM(IF(gs.error_code=3, gs.sess_count, 0)) as error_3 FROM gtp_session_stats gs JOIN oam_portal.network_master nm ON gs.vpmn_nwid = nm.network_id WHERE gs.day BETWEEN :start AND :end AND (gs.home_nwid = :hpmn OR :hpmn IS NULL) AND (gs.vpmn_nwid = :vpmn OR :vpmn IS NULL) GROUP BY nm.network_name"
+                        }
+                    }
+                }
+            ]
+        },
+        {
+            "columns": [
+                {
+                    "span": 12,
+                    "widget": {
+                        "type": "chart",
+                        "title": "Failures by PGW IP",
+                        "chartType": "bar",
+                        "dataSource": {
+                            "dbPool": "GTP_PROXY",
+                            "query": "SELECT pgw_ip as x_axis, SUM(IF(error_code=1, sess_count, 0)) as error_1, SUM(IF(error_code=2, sess_count, 0)) as error_2, SUM(IF(error_code=3, sess_count, 0)) as error_3 FROM gtp_session_stats WHERE day BETWEEN :start AND :end AND (home_nwid = :hpmn OR :hpmn IS NULL) AND (vpmn_nwid = :vpmn OR :vpmn IS NULL) GROUP BY pgw_ip"
                         }
                     }
                 },
@@ -135,7 +135,7 @@
                         "chartType": "bar",
                         "dataSource": {
                             "dbPool": "GTP_PROXY",
-                            "query": "SELECT apn as x_axis, SUM(IF(error_code>0, sess_count, 0)) as total_failures FROM gtp_session_stats WHERE day BETWEEN :start AND :end AND (home_nwid = :hpmn OR :hpmn IS NULL) AND (vpmn_nwid = :vpmn OR :vpmn IS NULL) GROUP BY apn"
+                            "query": "SELECT apn as x_axis, SUM(IF(error_code=1, sess_count, 0)) as error_1, SUM(IF(error_code=2, sess_count, 0)) as error_2, SUM(IF(error_code=3, sess_count, 0)) as error_3 FROM gtp_session_stats WHERE day BETWEEN :start AND :end AND (home_nwid = :hpmn OR :hpmn IS NULL) AND (vpmn_nwid = :vpmn OR :vpmn IS NULL) GROUP BY apn"
                         }
                     }
                 }

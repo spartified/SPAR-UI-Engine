@@ -136,60 +136,90 @@ const ChartRenderer = ({ widget, filters, data }: WidgetRendererProps<ChartWidge
         }));
     }
 
+    const colorPalette = [
+        brandingConfig.theme.primaryColor,
+        '#22D3EE', // Secondary (Cyan)
+        '#9f7aea', // Purple
+        '#f6ad55', // Orange
+        '#48bb78', // Green
+        '#f687b3', // Pink
+        '#4299e1', // Blue
+        '#ed64a6', // Dark Pink
+    ];
+
     const option = {
+        color: colorPalette,
         title: {
             text: widget.title + titleSuffix,
-            textStyle: { color: brandingConfig.theme.textColor }
+            textStyle: {
+                color: brandingConfig.theme.textColor,
+                fontSize: 16,
+                fontWeight: 'normal'
+            },
+            top: 0
         },
         legend: {
             textStyle: { color: brandingConfig.theme.textColor },
-            bottom: 0
+            bottom: 0,
+            type: 'scroll' // Handle many legends
         },
         toolbox: {
             feature: {
-                saveAsImage: { title: 'Save Image' },
-                dataView: { title: 'Data View', readOnly: false },
-                restore: { title: 'Restore' }
+                saveAsImage: { title: 'Save' },
+                dataView: { title: 'Data', readOnly: false },
+                restore: { title: 'Reset' }
             },
             iconStyle: {
                 borderColor: brandingConfig.theme.textColor
             },
-            right: 10,
+            right: 0,
             top: 0
         },
         backgroundColor: 'transparent',
         tooltip: {
-            trigger: 'axis',
+            trigger: xAxis ? 'axis' : 'item',
+            backgroundColor: 'rgba(17, 24, 39, 0.9)',
+            borderColor: '#374151',
+            textStyle: { color: '#fff' }
         },
         grid: {
             left: '3%',
             right: '4%',
-            bottom: '10%',
+            bottom: '15%', // Increased to handle rotated labels
+            top: '15%',
             containLabel: true
         },
         xAxis: widget.chartType === 'pie' ? undefined : {
             type: 'category',
             data: xAxis || [],
-            axisLabel: { color: brandingConfig.theme.textColor },
-            axisLine: { lineStyle: { color: brandingConfig.theme.textColor } }
+            axisLabel: {
+                color: brandingConfig.theme.textColor,
+                rotate: xAxis && xAxis.length > 5 ? 30 : 0 // Rotate if many items
+            },
+            axisLine: { lineStyle: { color: '#374151' } }
         },
         yAxis: widget.chartType === 'pie' ? undefined : {
             type: 'value',
             axisLabel: { color: brandingConfig.theme.textColor },
-            splitLine: { lineStyle: { color: '#333' } }
+            splitLine: { lineStyle: { color: '#1f2937' } },
+            axisLine: { show: false }
         },
-        series: series.map((s, index) => ({
+        series: series.map((s) => ({
             name: s.name,
             type: widget.chartType,
             data: s.data,
-            // Cycle colors if many series
-            itemStyle: index === 0 ? { color: brandingConfig.theme.primaryColor } : undefined
+            smooth: true,
+            symbol: 'circle',
+            symbolSize: 6,
+            areaStyle: widget.chartType === 'line' ? {
+                opacity: 0.1
+            } : undefined
         }))
     };
 
     return (
-        <Card bordered={false} style={{ background: brandingConfig.theme.componentBg }}>
-            <ReactECharts option={option} style={{ height: widget.height || 450 }} />
+        <Card bordered={false} style={{ background: brandingConfig.theme.componentBg, borderRadius: 12, overflow: 'hidden' }}>
+            <ReactECharts option={option} style={{ height: widget.height || 400 }} />
         </Card>
     );
 };
@@ -367,9 +397,7 @@ export const PageEngine = ({ schema }: { schema: PageSchema }) => {
     };
 
     useEffect(() => {
-        if (Object.keys(filterValues).length > 0) {
-            fetchWidgetData();
-        }
+        fetchWidgetData();
     }, [filterValues]);
 
     return (
