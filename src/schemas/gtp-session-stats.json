@@ -36,7 +36,7 @@
                     "widget": {
                         "type": "chart",
                         "title": "Session Stats (Time)",
-                        "chartType": "line",
+                        "chartType": "bar",
                         "dataSource": {
                             "dbPool": "GTP_PROXY",
                             "query": "SELECT IF(DATEDIFF(:end, :start) < 30, DATE_FORMAT(day, '%Y-%m-%d'), DATE_FORMAT(day, '%Y-%m')) as x_axis, SUM(sess_count) as total_sessions, SUM(IF(error_code=0, sess_count, 0)) as success_count, SUM(IF(error_code>0, sess_count, 0)) as fail_count, SUM(IF(error_code=-1, sess_count, 0)) as rejected_count FROM gtp_session_stats WHERE day BETWEEN :start AND :end AND (home_nwid = :hpmn OR :hpmn IS NULL) AND (vpmn_nwid = :vpmn OR :vpmn IS NULL) GROUP BY x_axis ORDER BY x_axis"

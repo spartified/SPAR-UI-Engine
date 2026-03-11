@@ -8,8 +8,8 @@ import { dbManager } from "@/core/db/manager";
 const getMockData = (query: string) => {
     const q = query.toLowerCase();
 
-    // 1. Network Master (Filters)
-    if (q.includes("network_master")) {
+    // 1. Network Master (Filters - Lookups only)
+    if (q.includes("network_master") && !q.includes("gtp_session_stats")) {
         return [
             { value: 1, label: "Dummy Network 1" },
             { value: 2, label: "Dummy Network 2" },
