@@ -102,6 +102,10 @@
                 {
                     "label": "Manage GTP Session Mgmt",
                     "value": "gtp:session:manage"
+                },
+                {
+                    "label": "Read GTP Session Stats",
+                    "value": "report:gtp:read"
                 }
             ],
             "required": false,

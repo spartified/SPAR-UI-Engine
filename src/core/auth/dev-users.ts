@@ -16,7 +16,8 @@ export const DEV_USERS = [
             "grafana",
             "gtp:imsi:manage",
             "gtp:mapping:manage",
-            "gtp:session:manage"
+            "gtp:session:manage",
+            "report:gtp:read"
         ]
     },
     {
