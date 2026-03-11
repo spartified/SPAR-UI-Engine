@@ -18,24 +18,34 @@ const getMockData = (query: string) => {
     }
 
     // 2. GTP Session Stats - Success/Fail Trends (Time)
-    if (q.includes("gtp_session_stats") && q.includes("sum(sess_count)")) {
+    if (q.includes("gtp_session_stats") && (q.includes("date_format") || q.includes("datediff") || q.includes("total_failures"))) {
         const data = [];
+        const isFailureOnly = q.includes("total_failures") && !q.includes("success_count");
+
         for (let i = 0; i < 7; i++) {
             const date = new Date();
             date.setDate(date.getDate() - (6 - i));
             const x_axis = date.toISOString().split('T')[0];
-            data.push({
-                x_axis,
-                total_sessions: 1000 + Math.floor(Math.random() * 500),
-                success_count: 800 + Math.floor(Math.random() * 200),
-                fail_count: 100 + Math.floor(Math.random() * 100),
-                rejected_count: 50 + Math.floor(Math.random() * 50)
-            });
+
+            if (isFailureOnly) {
+                data.push({
+                    x_axis,
+                    total_failures: 100 + Math.floor(Math.random() * 200)
+                });
+            } else {
+                data.push({
+                    x_axis,
+                    total_sessions: 1000 + Math.floor(Math.random() * 500),
+                    success_count: 800 + Math.floor(Math.random() * 200),
+                    fail_count: 100 + Math.floor(Math.random() * 100),
+                    rejected_count: 50 + Math.floor(Math.random() * 50)
+                });
+            }
         }
         return data;
     }
 
-    // 3. GTP Session Stats - Failures Breakdown (Bars/Categories)
+    // 3. GTP Session Stats - Failures Breakdown (Bars/Categories: VPMN, PGW, APN)
     if (q.includes("gtp_session_stats") && q.includes("group by")) {
         const categories = q.includes("network_name") ? ["VPMN 1", "VPMN 2", "VPMN 3"] :
             q.includes("pgw_ip") ? ["192.168.1.1", "192.168.1.2", "192.168.1.3"] :
