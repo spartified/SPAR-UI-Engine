@@ -1,0 +1,66 @@
+{
+    "title": "Aggregator Accounts",
+    "endpoint": "/api/orion/aggregators",
+    "permission": "orion:aggregator:manage",
+    "dbPool": "ORION",
+    "tableName": "aggregator_api_keys",
+    "fields": [
+        {
+            "name": "id",
+            "label": "ID",
+            "type": "number",
+            "primary": true,
+            "hidden": true,
+            "editable": false
+        },
+        {
+            "name": "name",
+            "label": "Name",
+            "type": "text",
+            "required": true,
+            "editable": true
+        },
+        {
+            "name": "description",
+            "label": "Description",
+            "type": "text",
+            "required": false,
+            "editable": true
+        },
+        {
+            "name": "aggregator_id",
+            "label": "Aggregator",
+            "type": "select",
+            "lookup": {
+                "dbPool": "ORION",
+                "query": "SELECT id AS value, name AS label FROM aggregators WHERE status = 'ACTIVE'"
+            },
+            "required": true,
+            "editable": true
+        },
+        {
+            "name": "base_url",
+            "label": "Base URL",
+            "type": "text",
+            "required": false,
+            "editable": true
+        },
+        {
+            "name": "status",
+            "label": "Status",
+            "type": "select",
+            "options": [
+                {
+                    "label": "Active",
+                    "value": "ACTIVE"
+                },
+                {
+                    "label": "Inactive",
+                    "value": "INACTIVE"
+                }
+            ],
+            "required": true,
+            "editable": true
+        }
+    ]
+}

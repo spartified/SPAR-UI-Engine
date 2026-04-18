@@ -119,3 +119,53 @@ The dashboard is a standard React page located at `src/app/(authenticated)/dashb
       // ...
     };
     ```
+
+---
+
+## Keycloak Integration
+
+The SPAR UI Engine uses Keycloak for authentication and authorization.
+
+### 1. Environment Variables
+
+Configure the following variables in your `.env.local` or `docker-compose.yml`:
+
+| Variable | Description | Example |
+| :--- | :--- | :--- |
+| `AUTH_MODE` | Set to `keycloak` to enable Keycloak. | `keycloak` |
+| `NEXTAUTH_URL` | The base URL of your application (must match the browser access URL). | `http://localhost:3000` |
+| `NEXTAUTH_SECRET` | A secret for NextAuth session encryption. | `your-random-secret` |
+| `KEYCLOAK_ID` | The Client ID configured in Keycloak. | `nextjs-app` |
+| `KEYCLOAK_SECRET` | The Client Secret from Keycloak. | `your-client-secret` |
+| `KEYCLOAK_ISSUER` | Must match Keycloak's public issuer URL (include `/auth` if applicable). | `http://localhost:8080/auth/realms/spartified` |
+
+### 2. Role & Permission Mapping
+
+The engine automatically handles roles and permissions during the Keycloak login flow:
+- **Automatic Role Extraction**: Roles are extracted from the `access_token` payload (falling back to the profile/ID token if available).
+- **Admin Access**: Users with the `admin` or `ADMIN` role in Keycloak are automatically granted all available permissions defined in `MODULE_REGISTRY`.
+- **Default Access**: All authenticated users receive `dashboard:read` permission by default, ensuring they can access the landing page and see the dashboard in the sidebar.
+- **Custom Roles**: Any other roles present in the token are added to the user's permission set.
+
+### 3. Keycloak Setup Requirements
+
+1.  **Create a Realm**: e.g., `spartified`.
+2.  **Create a Client**: 
+    - **Access Type**: `confidential`.
+    - **Valid Redirect URIs**: `http://localhost:3000/api/auth/callback/keycloak`.
+3.  **Client Roles**: Create an `admin` role and assign it to your administrative users.
+4.  **Hostname Configuration**: Ensure `KC_HOSTNAME` in Keycloak matches the host/IP used in `KEYCLOAK_ISSUER` to avoid OIDC discovery mismatches.
+
+### 4. Troubleshooting: `OAuthSignin` Error
+
+If you see `error=OAuthSignin` in the URL:
+- **Discovery Failed**: The portal container cannot reach the `KEYCLOAK_ISSUER`. Ensure the URL is accessible from within the Docker network.
+- **Path Mismatch**: Keycloak 17+ defaults to no prefix, but Docker containers often use a relative path like `/auth`. Check if your issuer URL needs `/auth/realms/`.
+- **Issuer Mismatch**: The `issuer` URL provided in the configuration must exactly match the `issuer` string returned by Keycloak's `.well-known/openid-configuration` endpoint.
+
+### 5. Applying Changes
+
+When modifying authentication logic or environment variables in Docker, always rebuild the container:
+```bash
+docker compose up -d --build
+```

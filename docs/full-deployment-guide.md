@@ -39,7 +39,7 @@ The portal relies on several key architectural components:
 
 1.  Create a **PostgreSQL 15+ Instance** using the `db-sg`.
 2.  Use **Multi-AZ** for production high availability.
-3.  Initialize the schema using the provided [`db/init.sql`](file:///home/guest/Desktop/Code/UIFrameWork/db/init.sql) script:
+3.  Initialize the schema using the provided [`db/init.sql`](file:///home/guest/Desktop/Code/SPAR-UI-Engine/db/init.sql) script:
     ```bash
     # Example using mysql client
     mysql -h <rds-endpoint> -u <user> -p oam_portal < db/init.sql

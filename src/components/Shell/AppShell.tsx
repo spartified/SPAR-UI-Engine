@@ -1,20 +1,20 @@
 "use client";
-import React, { useState } from "react";
-import { Layout, Menu, Button, Avatar, Dropdown } from "antd";
+import React, { useState, useMemo, useEffect, useRef } from "react";
+import { Layout, Menu, Button, Avatar, Dropdown, Tooltip } from "antd";
 import {
     MenuFoldOutlined,
     MenuUnfoldOutlined,
     UserOutlined,
     LogoutOutlined,
-    DashboardOutlined,
-    BarChartOutlined,
-    SettingOutlined
+    SettingOutlined,
+    BulbOutlined,
+    BulbFilled,
 } from "@ant-design/icons";
 import { brandingConfig } from "@/branding.config";
 import { useAuth } from "@/core/auth/AuthProvider";
 import { useRouter, usePathname } from "next/navigation";
+import { useTheme } from "@/context/ThemeContext";
 
-import { TenantProvider } from "@/context/TenantContext";
 import { TenantSwitcher } from "./TenantSwitcher";
 import { MODULE_REGISTRY, CATEGORIES } from "@/config/modules";
 
@@ -22,20 +22,31 @@ import { MODULE_REGISTRY, CATEGORIES } from "@/config/modules";
 const { Header, Sider, Content } = Layout;
 
 export const AppShell = ({ children }: { children: React.ReactNode }) => {
-    return (
-        <TenantProvider>
-            <AppShellContent>{children}</AppShellContent>
-        </TenantProvider>
-    );
+    return <AppShellContent>{children}</AppShellContent>;
 };
 
 const AppShellContent = ({ children }: { children: React.ReactNode }) => {
     const [collapsed, setCollapsed] = useState(false);
-    const { logout, user } = useAuth();
+    const { logout, user, loading } = useAuth();
+    const loadingTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+    const { mode, toggleTheme, theme } = useTheme();
     const router = useRouter();
     const pathname = usePathname();
 
-    const menuItems: any[] = CATEGORIES.map((category: any) => {
+    useEffect(() => {
+        if (loading) {
+            loadingTimer.current = setTimeout(() => {
+                // Session stuck — log out and redirect
+                router.push('/');
+            }, 10_000);
+        } else {
+            if (loadingTimer.current) clearTimeout(loadingTimer.current);
+        }
+        return () => { if (loadingTimer.current) clearTimeout(loadingTimer.current); };
+    }, [loading, router]);
+
+    // Memoize menuItems so it's only recomputed when permissions change, not on every render
+    const menuItems: any[] = useMemo(() => CATEGORIES.map((category: any) => {
         const children = MODULE_REGISTRY
             .filter(module => module.category === category.id && user?.permissions?.includes(module.permission))
             .map(module => ({
@@ -45,29 +56,35 @@ const AppShellContent = ({ children }: { children: React.ReactNode }) => {
 
         if (children.length === 0) return null;
 
+        // Single-child categories become a direct top-level link (no submenu)
+        if (children.length === 1) {
+            return {
+                key: children[0].key,
+                icon: category.icon,
+                label: category.title,
+            };
+        }
+
+        // Multi-child categories become a collapsible submenu
         return {
             key: category.id,
             icon: category.icon,
             label: category.title,
-            children: children.length > 1 || (category.id !== 'Dashboard' && category.id !== 'Monitor' && category.id !== 'User Management' && category.id !== 'Audit Trail') ? children : undefined,
+            children,
         };
 
-    }).filter(Boolean);
+    }).filter(Boolean), [user?.permissions]);
 
-    // Adjust categories with single child to be top-level
-    menuItems.forEach((item: any) => {
-        if (!item.children || item.children.length === 0) {
-            // Check if it's a single page category like Monitor or Dashboard
-            const modules = MODULE_REGISTRY.filter(m => m.category === item.key && user?.permissions?.includes(m.permission));
-            if (modules.length === 1) {
-                item.key = modules[0].path;
-            }
-        }
-    });
-
-
-
-    const userMenuItems = [
+    const userMenuItems: any[] = [
+        ...(user?.permissions?.includes('user:manage') ? [
+            {
+                key: "api-keys",
+                icon: <SettingOutlined />,
+                label: "Developer API Keys",
+                onClick: () => router.push('/configuration/api-keys'),
+            },
+            { type: "divider" }
+        ] : []),
         {
             key: "logout",
             icon: <LogoutOutlined />,
@@ -77,7 +94,7 @@ const AppShellContent = ({ children }: { children: React.ReactNode }) => {
     ];
 
     return (
-        <Layout style={{ minHeight: "100vh" }}>
+        <Layout style={{ minHeight: "100vh", background: theme.background }}>
             <Sider
                 trigger={null}
                 collapsible
@@ -90,7 +107,7 @@ const AppShellContent = ({ children }: { children: React.ReactNode }) => {
                     left: 0,
                     top: 0,
                     bottom: 0,
-                    background: brandingConfig.theme.sidebarBg
+                    background: theme.sidebarBg
                 }}
             >
                 <div style={{
@@ -120,24 +137,40 @@ const AppShellContent = ({ children }: { children: React.ReactNode }) => {
                     mode="inline"
                     defaultSelectedKeys={[pathname]}
                     items={menuItems}
-                    onClick={({ key }) => router.push(key)}
-                    style={{ background: brandingConfig.theme.sidebarBg }}
+                    onClick={({ key }) => { if (key.startsWith('/')) router.push(key); }}
+                    style={{ background: theme.sidebarBg }}
                 />
             </Sider>
-            <Layout style={{ marginLeft: collapsed ? 80 : 200, transition: "all 0.2s", background: brandingConfig.theme.background }}>
-                <Header style={{ padding: 0, background: brandingConfig.theme.componentBg, display: "flex", justifyContent: "space-between", alignItems: "center", paddingRight: 24, color: brandingConfig.theme.textColor }}>
+            <Layout style={{ marginLeft: collapsed ? 80 : 200, transition: "all 0.2s", background: theme.background }}>
+                <Header style={{ padding: 0, background: theme.componentBg, display: "flex", justifyContent: "space-between", alignItems: "center", paddingRight: 24, color: theme.textColor }}>
                     <Button
                         type="text"
                         icon={collapsed ? <MenuUnfoldOutlined /> : <MenuFoldOutlined />}
                         onClick={() => setCollapsed(!collapsed)}
-                        style={{ fontSize: "16px", width: 64, height: 64, color: brandingConfig.theme.textColor }}
+                        style={{ fontSize: "16px", width: 64, height: 64, color: theme.textColor }}
                     />
                     <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
                         <TenantSwitcher />
+
+                        {/* Theme Toggle (Configurable) */}
+                        {brandingConfig.showThemeToggle && (
+                            <Tooltip title={mode === 'dark' ? 'Switch to Light Mode' : 'Switch to Dark Mode'}>
+                                <Button
+                                    type="text"
+                                    icon={mode === 'dark' ? <BulbOutlined /> : <BulbFilled style={{ color: '#FBBF24' }} />}
+                                    onClick={toggleTheme}
+                                    style={{ color: theme.textColor, fontSize: 16 }}
+                                />
+                            </Tooltip>
+                        )}
+
                         <Dropdown menu={{ items: userMenuItems }}>
-                            <div style={{ cursor: "pointer", display: "flex", alignItems: "center", gap: 8, color: brandingConfig.theme.textColor }}>
-                                <Avatar icon={<UserOutlined />} style={{ backgroundColor: brandingConfig.theme.primaryColor }} />
-                                <span>{user?.name || "User"}</span>
+                            <div style={{ cursor: "pointer", display: "flex", alignItems: "center", gap: 8, color: theme.textColor }}>
+                                <Avatar icon={<UserOutlined />} style={{ backgroundColor: theme.primaryColor }} />
+                                <div style={{ display: 'flex', flexDirection: 'column', lineHeight: 1 }}>
+                                    <span>{user?.name || "User"}</span>
+                                    <small style={{ fontSize: 10, opacity: 0.6 }}>{user?.permissions?.length || 0} permissions</small>
+                                </div>
                             </div>
                         </Dropdown>
                     </div>
@@ -147,17 +180,24 @@ const AppShellContent = ({ children }: { children: React.ReactNode }) => {
                         margin: "24px 16px",
                         padding: 24,
                         minHeight: 280,
-                        background: brandingConfig.theme.componentBg,
+                        background: theme.componentBg,
                         borderRadius: 8,
-                        color: brandingConfig.theme.textColor
+                        color: theme.textColor
                     }}
                 >
                     {(() => {
+                        if (loading) {
+                            return (
+                                <div style={{ textAlign: 'center', padding: '100px 0' }}>
+                                    <h2 style={{ color: theme.primaryColor }}>Loading...</h2>
+                                </div>
+                            );
+                        }
                         const currentModule = MODULE_REGISTRY.find(m => pathname.startsWith(m.path));
                         if (currentModule && !user?.permissions?.includes(currentModule.permission)) {
                             return (
                                 <div style={{ textAlign: 'center', padding: '100px 0' }}>
-                                    <h2 style={{ color: brandingConfig.theme.primaryColor }}>Access Denied</h2>
+                                    <h2 style={{ color: theme.primaryColor }}>Access Denied</h2>
                                     <p>You do not have permission to access the &quot;{currentModule.title}&quot; module.</p>
                                     <Button type="primary" onClick={() => router.push('/dashboard')}>Back to Dashboard</Button>
                                 </div>

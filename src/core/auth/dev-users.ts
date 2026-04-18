@@ -6,6 +6,7 @@ export const DEV_USERS = [
         name: "Dev Admin",
         email: "admin@example.com",
         role: "admin",
+        account_id: 1, // Root Account
         permissions: [
             "dashboard:read",
             "report:telecom:read",
@@ -17,7 +18,15 @@ export const DEV_USERS = [
             "gtp:imsi:manage",
             "gtp:mapping:manage",
             "gtp:session:manage",
-            "report:gtp:read"
+            "report:gtp:read",
+            "orion:dashboard:read",
+            "orion:account:manage",
+            "orion:user:manage",
+            "orion:role:manage",
+            "orion:inventory:manage",
+            "orion:esim:manage",
+            "orion:aggregator:manage",
+            "orion:package:manage"
         ]
     },
     {
@@ -27,6 +36,7 @@ export const DEV_USERS = [
         name: "Dev Viewer",
         email: "viewer@example.com",
         role: "viewer",
+        account_id: 2, // Acme Enterprise
         permissions: ["dashboard:read", "node:read"]
     }
 ];

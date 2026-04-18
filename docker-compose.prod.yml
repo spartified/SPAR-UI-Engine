@@ -1,0 +1,47 @@
+version: '3.8'
+
+services:
+  spar-ui-engine:
+    image: spar-ui-engine:prod
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: spar-ui-engine
+    ports:
+      - "3000:3000"
+    environment:
+      - CORE_DB_URL=${CORE_DB_URL}
+      - GTP_PROXY_DB_URL=${GTP_PROXY_DB_URL}
+      - ORION_DB_URL=${ORION_DB_URL}
+      - AUTH_MODE=keycloak
+      - NEXT_PUBLIC_AUTH_MODE=keycloak
+      - NEXTAUTH_URL=${NEXTAUTH_URL}
+      - NEXTAUTH_SECRET=${NEXTAUTH_SECRET}
+      - KEYCLOAK_ID=${KEYCLOAK_ID}
+      - KEYCLOAK_SECRET=${KEYCLOAK_SECRET}
+      - KEYCLOAK_ISSUER=${KEYCLOAK_ISSUER}
+      - NEXT_PUBLIC_GRAFANA_URL_SERVER=${GRAFANA_URL_SERVER}
+      - NEXT_PUBLIC_GRAFANA_URL_DB=${GRAFANA_URL_DB}
+      - NEXT_PUBLIC_GRAFANA_URL_APP=${GRAFANA_URL_APP}
+    depends_on:
+      - keycloak
+    restart: always
+
+  keycloak:
+    image: quay.io/keycloak/keycloak:22.0.1
+    container_name: keycloak
+    command: start --http-relative-path /auth --optimized
+    ports:
+      - "8080:8080"
+    environment:
+      - KC_DB=mysql
+      - KC_DB_URL=${KC_DB_URL}
+      - KC_DB_USERNAME=${KC_DB_USER}
+      - KC_DB_PASSWORD=${KC_DB_PASS}
+      - KC_HOSTNAME=${KC_HOSTNAME}
+      - KC_HOSTNAME_STRICT=false
+      - KC_HTTP_ENABLED=true
+      - KC_HOSTNAME_STRICT_HTTPS=false
+      - KEYCLOAK_ADMIN=${KC_ADMIN}
+      - KEYCLOAK_ADMIN_PASSWORD=${KC_ADMIN_PASS}
+    restart: always

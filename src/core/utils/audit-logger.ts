@@ -4,7 +4,7 @@ export interface AuditEntry {
     username: string;
     ipAddress?: string;
     screen?: string;
-    action: 'Login' | 'Logout' | 'Data Insert' | 'Data Update' | 'Data Delete' | 'Login Failed';
+    action: 'Login' | 'Logout' | 'Data Insert' | 'Data Update' | 'Data Delete' | 'Login Failed' | 'Bulk Action' | string;
     details?: string;
     status: 'Success' | 'Fail';
 }

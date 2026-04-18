@@ -1,0 +1,108 @@
+{
+    "title": "eSIM Inventory",
+    "endpoint": "/api/orion/inventory",
+    "permission": "orion:inventory:manage",
+    "dbPool": "ORION",
+    "tableName": "inventory_batches",
+    "filters": [
+        {
+            "key": "aggregator",
+            "type": "select",
+            "label": "Aggregator Account",
+            "placeholder": "Select Aggregator",
+            "lookup": {
+                "dbPool": "ORION",
+                "query": "SELECT name AS value, name AS label FROM aggregator_api_keys WHERE status = 'ACTIVE'"
+            }
+        }
+    ],
+    "fields": [
+        {
+            "name": "id",
+            "label": "ID",
+            "type": "number",
+            "primary": true,
+            "hidden": true,
+            "editable": false
+        },
+        {
+            "name": "inventory_id",
+            "label": "Inventory ID",
+            "type": "text",
+            "required": true,
+            "editable": false,
+            "linkUrl": "/orion/inventory-details?id={id}"
+        },
+        {
+            "name": "account_id",
+            "label": "Account",
+            "type": "select",
+            "lookup": {
+                "dbPool": "ORION",
+                "query": "SELECT id AS value, name AS label FROM accounts WHERE status = 'ACTIVE'"
+            },
+            "required": true,
+            "editable": true
+        },
+        {
+            "name": "start_iccid",
+            "label": "Start ICCID",
+            "type": "text",
+            "required": true,
+            "editable": true
+        },
+        {
+            "name": "end_iccid",
+            "label": "End ICCID",
+            "type": "text",
+            "required": true,
+            "editable": true
+        },
+        {
+            "name": "total_count",
+            "label": "Total Count",
+            "type": "number",
+            "required": true,
+            "editable": true
+        },
+        {
+            "name": "available_count",
+            "label": "Available Count",
+            "type": "number",
+            "required": false,
+            "editable": true
+        },
+        {
+            "name": "aggregator",
+            "label": "Aggregator",
+            "type": "select",
+            "lookup": {
+                "dbPool": "ORION",
+                "query": "SELECT name AS value, name AS label FROM aggregator_api_keys WHERE status = 'ACTIVE'"
+            },
+            "required": false,
+            "editable": true
+        },
+        {
+            "name": "status",
+            "label": "Status",
+            "type": "select",
+            "options": [
+                {
+                    "label": "Available",
+                    "value": "AVAILABLE"
+                },
+                {
+                    "label": "Partially Allocated",
+                    "value": "PARTIALLY_ALLOCATED"
+                },
+                {
+                    "label": "Fully Allocated",
+                    "value": "FULLY_ALLOCATED"
+                }
+            ],
+            "required": false,
+            "editable": true
+        }
+    ]
+}

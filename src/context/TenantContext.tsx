@@ -22,46 +22,47 @@ export const TenantProvider = ({ children }: { children: React.ReactNode }) => {
     const { user } = useAuth();
     const [tenant, setTenant] = useState<Tenant | null>(null);
     const [tenants, setTenants] = useState<Tenant[]>([]);
-    const [isLoading, setIsLoading] = useState(true);
+    const [isLoading, setIsLoading] = useState(false);
 
     useEffect(() => {
-        // Simulating API fetch based on user
+        if (!user) {
+            setIsLoading(false);
+            return;
+        }
+
+        const controller = new AbortController();
+
         const fetchTenants = async () => {
             setIsLoading(true);
             try {
-                // Mock data - in real app, fetch from /api/tenants
-                // Different users could see different tenants
-                const mockTenants: Tenant[] = [
-                    { id: 't1', name: 'Acme Corp', description: 'Main organization' },
-                    { id: 't2', name: 'Globex Inc', description: 'Subsidiary' },
-                    { id: 't3', name: 'Soylent Corp', description: 'Research division' },
-                ];
+                const response = await fetch('/api/tenants', { signal: controller.signal });
+                if (!response.ok) {
+                    throw new Error("Failed to fetch tenants");
+                }
+                const fetchedTenants: Tenant[] = await response.json();
 
-                // If user is admin, they might see all. If standard user, maybe subset.
-                // For now, everyone sees all mock tenants.
-                setTenants(mockTenants);
+                setTenants(fetchedTenants);
 
-                // Default to first tenant if none selected
-                // Or load from localStorage
                 const savedTenantId = localStorage.getItem('selectedTenantId');
-                const foundTenant = mockTenants.find(t => t.id === savedTenantId);
+                const foundTenant = fetchedTenants.find(t => t.id === savedTenantId);
 
                 if (foundTenant) {
                     setTenant(foundTenant);
-                } else if (mockTenants.length > 0) {
-                    setTenant(mockTenants[0]);
+                } else if (fetchedTenants.length > 0) {
+                    setTenant(fetchedTenants[0]);
                 }
             } catch (error) {
+                if ((error as any).name === 'AbortError') return;
                 console.error("Failed to fetch tenants", error);
             } finally {
                 setIsLoading(false);
             }
         };
 
-        if (user) {
-            fetchTenants();
-        }
-    }, [user]);
+        fetchTenants();
+
+        return () => controller.abort();
+    }, [user?.email]);
 
     const handleSetTenant = (newTenant: Tenant) => {
         setTenant(newTenant);

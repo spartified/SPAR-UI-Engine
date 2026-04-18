@@ -4,6 +4,14 @@
     "permission": "user:manage",
     "fields": [
         {
+            "name": "id",
+            "label": "ID",
+            "type": "text",
+            "primary": true,
+            "hidden": true,
+            "editable": false
+        },
+        {
             "name": "username",
             "label": "Username",
             "type": "text",
@@ -21,6 +29,7 @@
             "name": "email",
             "label": "Email",
             "type": "email",
+            "primary": true,
             "required": true,
             "editable": true
         },
@@ -45,71 +54,27 @@
             "name": "tenants",
             "label": "Allowed Tenants",
             "type": "multi-select",
-            "options": [
-                {
-                    "label": "Acme Corp",
-                    "value": "acme"
-                },
-                {
-                    "label": "Globex Inc",
-                    "value": "globex"
-                },
-                {
-                    "label": "Umbrella Corp",
-                    "value": "umbrella"
-                }
-            ],
+            "lookup": {
+                "dbPool": "CORE",
+                "query": "SELECT id AS value, name AS label FROM tenants"
+            },
             "required": true,
-            "editable": true
+            "editable": true,
+            "hidden": false,
+            "showInList": true
         },
         {
             "name": "permissions",
             "label": "Granular Permissions",
             "type": "multi-select",
-            "options": [
-                {
-                    "label": "Manage Users",
-                    "value": "user:manage"
-                },
-                {
-                    "label": "Create Nodes",
-                    "value": "node:create"
-                },
-                {
-                    "label": "Update Nodes",
-                    "value": "node:update"
-                },
-                {
-                    "label": "Delete Nodes",
-                    "value": "node:delete"
-                },
-                {
-                    "label": "Read Nodes",
-                    "value": "node:read"
-                },
-                {
-                    "label": "Access Grafana",
-                    "value": "grafana"
-                },
-                {
-                    "label": "Manage GTP IMSI Ranges",
-                    "value": "gtp:imsi:manage"
-                },
-                {
-                    "label": "Manage GTP MCC-MNC Mappings",
-                    "value": "gtp:mapping:manage"
-                },
-                {
-                    "label": "Manage GTP Session Mgmt",
-                    "value": "gtp:session:manage"
-                },
-                {
-                    "label": "Read GTP Session Stats",
-                    "value": "report:gtp:read"
-                }
-            ],
+            "lookup": {
+                "dbPool": "SYSTEM",
+                "query": "available_permissions"
+            },
             "required": false,
-            "editable": true
+            "editable": true,
+            "hidden": false,
+            "showInList": true
         }
     ]
 }

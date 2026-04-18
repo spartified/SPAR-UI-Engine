@@ -1,10 +1,11 @@
 "use client";
-import React, { createContext, useContext } from "react";
+import React, { createContext, useContext, useMemo } from "react";
 import { useSession, signIn, signOut } from "next-auth/react";
 
 interface AuthContextType {
     isAuthenticated: boolean;
     login: (values?: any) => void;
+    loginWithKeycloak: () => void;
     logout: () => void;
     user: { name: string; email: string; role: string; permissions: string[] } | null;
     loading: boolean;
@@ -18,12 +19,15 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     const isAuthenticated = status === "authenticated";
     const loading = status === "loading";
 
-    const user = session?.user ? {
-        name: session.user.name || "",
-        email: session.user.email || "",
-        role: (session.user as any).role || "viewer",
-        permissions: (session.user as any).permissions || []
-    } : null;
+    const user = useMemo(() => {
+        if (!session?.user) return null;
+        return {
+            name: session.user.name || "",
+            email: session.user.email || "",
+            role: (session.user as any).role || "viewer",
+            permissions: (session.user as any).permissions || []
+        };
+    }, [session]);
 
     const login = (values?: any) => {
         if (values) {
@@ -38,12 +42,37 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         }
     };
 
-    const logout = () => {
+    const loginWithKeycloak = () => {
+        signIn("keycloak", { callbackUrl: "/dashboard" });
+    };
+
+    const logout = async () => {
+        if (process.env.NEXT_PUBLIC_AUTH_MODE === 'keycloak') {
+            const issuer = process.env.NEXT_PUBLIC_KEYCLOAK_ISSUER;
+            const clientId = process.env.NEXT_PUBLIC_KEYCLOAK_ID;
+            const idToken = (session?.user as any)?.id_token;
+
+            if (issuer && clientId) {
+                // Ensure origin is clean but properly encoded
+                const origin = window.location.origin;
+                const encodedRedirect = encodeURIComponent(origin);
+
+                let logoutUrl = `${issuer}/protocol/openid-connect/logout?post_logout_redirect_uri=${encodedRedirect}&client_id=${clientId}`;
+
+                if (idToken) {
+                    logoutUrl += `&id_token_hint=${idToken}`;
+                }
+
+                await signOut({ redirect: false });
+                window.location.href = logoutUrl;
+                return;
+            }
+        }
         signOut({ callbackUrl: "/" });
     };
 
     return (
-        <AuthContext.Provider value={{ isAuthenticated, login, logout, user, loading }}>
+        <AuthContext.Provider value={{ isAuthenticated, login, loginWithKeycloak, logout, user, loading }}>
             {children}
         </AuthContext.Provider>
     );

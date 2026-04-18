@@ -63,3 +63,19 @@ CREATE TABLE IF NOT EXISTS audit_logs (
 -- Initial Data (Optional - Seed Admin)
 -- INSERT INTO users (id, username, name, email, role) VALUES ('1', 'admin', 'Dev Admin', 'admin@example.com', 'admin');
 -- INSERT INTO user_permissions (user_id, permission) VALUES ('1', 'user:manage'), ('1', 'dashboard:read'), ('1', 'node:read');
+
+-- 6. API Keys Table
+-- Manages platform-level developer keys for programmatic access per tenant
+CREATE TABLE IF NOT EXISTS api_keys (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    name VARCHAR(255) NOT NULL,
+    prefix VARCHAR(20) NOT NULL COMMENT 'Used for UI display (e.g. key_...)',
+    api_key_hash VARCHAR(255) NOT NULL UNIQUE COMMENT 'Hashed value for security',
+    tenant_id VARCHAR(100) NOT NULL,
+    user_id VARCHAR(50) COMMENT 'User who created the key',
+    status VARCHAR(20) DEFAULT 'active' COMMENT 'active, revoked',
+    expires_at TIMESTAMP NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE SET NULL
+);

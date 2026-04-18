@@ -1,0 +1,71 @@
+{
+    "title": "Developer API Keys",
+    "endpoint": "/api/api-keys",
+    "permission": "api-key:manage",
+    "dbPool": "CORE",
+    "tableName": "api_keys",
+    "fields": [
+        {
+            "name": "id",
+            "label": "ID",
+            "type": "number",
+            "primary": true,
+            "hidden": true,
+            "editable": false
+        },
+        {
+            "name": "name",
+            "label": "Key Name",
+            "type": "text",
+            "required": true,
+            "editable": true
+        },
+        {
+            "name": "prefix",
+            "label": "API Key (Prefix)",
+            "type": "text",
+            "editable": false
+        },
+        {
+            "name": "tenant_id",
+            "label": "Tenant ID",
+            "type": "text",
+            "editable": false
+        },
+        {
+            "name": "user_id",
+            "label": "User ID",
+            "type": "text",
+            "editable": false
+        },
+        {
+            "name": "status",
+            "label": "Status",
+            "type": "select",
+            "options": [
+                {
+                    "label": "Active",
+                    "value": "active"
+                },
+                {
+                    "label": "Revoked",
+                    "value": "revoked"
+                }
+            ],
+            "required": true,
+            "editable": true
+        },
+        {
+            "name": "expires_at",
+            "label": "Expires At",
+            "type": "date",
+            "editable": true
+        },
+        {
+            "name": "created_at",
+            "label": "Created At",
+            "type": "text",
+            "editable": false
+        }
+    ]
+}

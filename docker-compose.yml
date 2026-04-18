@@ -1,27 +1,30 @@
 version: '3.8'
 
 services:
-  oam-portal:
+  spar-ui-engine:
     # Option 1: Manual Build (Requires full source code package)
-    # build:
-    #   context: .
-    #   dockerfile: Dockerfile
+    build:
+      context: .
+      dockerfile: Dockerfile
 
     # Option 2: Registry Pull (Recommended - No source code package needed)
-    image: ghcr.io/gunmeetsingh/uiframework:main
+    # image: ghcr.io/gunmeetsingh/uiframework:main
 
-    container_name: oam-portal
+    image: spar-ui-engine:latest
+    container_name: spar-ui-engine
     ports:
       - "3000:3000"
     environment:
-      - CORE_DB_URL=mysql://root:gtp_root_pass@host.docker.internal:3307/oam_portal
-      - GTP_PROXY_DB_URL=mysql://root:gtp_root_pass@host.docker.internal:3307/gtp_proxy
-      - AUTH_MODE=local # Change to keycloak once logic is ready
-      - NEXTAUTH_URL=http://207.180.220.203:3000
+      - CORE_DB_URL=mysql://frauddb:Fraud@123@host.docker.internal:3306/spar_ui_engine
+      - GTP_PROXY_DB_URL=mysql://frauddb:Fraud@123@host.docker.internal:3306/gtp_proxy
+      - ORION_DB_URL=mysql://frauddb:Fraud@123@host.docker.internal:3306/orion
+      - AUTH_MODE=keycloak
+      - NEXT_PUBLIC_AUTH_MODE=keycloak
+      - NEXTAUTH_URL=http://localhost:3000
       - NEXTAUTH_SECRET=p3rs1st3nt_s3cr3t_f0r_prod
       - KEYCLOAK_ID=nextjs-app
       - KEYCLOAK_SECRET=dummy-secret
-      - KEYCLOAK_ISSUER=http://207.180.220.203:8080/realms/spartified
+      - KEYCLOAK_ISSUER=http://192.168.29.137:8080/auth/realms/spartified
       - NEXT_PUBLIC_GRAFANA_URL_SERVER=http://grafana.internal/d-solo/server/overview?orgId=1&panelId=1&theme=dark
       - NEXT_PUBLIC_GRAFANA_URL_DB=http://grafana.internal/d-solo/db/overview?orgId=1&panelId=1&theme=dark
       - NEXT_PUBLIC_GRAFANA_URL_APP=http://grafana.internal/d-solo/app/metrics?orgId=1&panelId=1&theme=dark
@@ -39,10 +42,15 @@ services:
       - "8080:8080"
     environment:
       - KC_DB=mysql
-      - KC_DB_URL=jdbc:mysql://host.docker.internal:3307/keycloak
-      - KC_DB_USERNAME=root
-      - KC_DB_PASSWORD=gtp_root_pass
-      - KC_HOSTNAME=207.180.220.203
+      - KC_DB_URL=jdbc:mysql://host.docker.internal:3306/keycloak
+      - KC_DB_USERNAME=frauddb
+      - KC_DB_PASSWORD=Fraud@123
+      # Forces Keycloak to use this as the base for redirects
+      - KC_HOSTNAME=192.168.29.137
+      - KC_HOSTNAME_STRICT=false
+      - KC_HTTP_ENABLED=true
+      # Useful if you are accessing via a tunnel or specific port
+      - KC_HOSTNAME_STRICT_HTTPS=false
       - KEYCLOAK_ADMIN=admin
       - KEYCLOAK_ADMIN_PASSWORD=admin
     extra_hosts:

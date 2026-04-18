@@ -1,0 +1,35 @@
+import { NextRequest, NextResponse } from "next/server";
+import { getServerSession } from "next-auth/next";
+import { authOptions } from "@/app/api/auth/[...nextauth]/route";
+import { dbManager } from "@/core/db/manager";
+
+export async function GET(req: NextRequest) {
+    const session = await getServerSession(authOptions);
+    if (!session) {
+        return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    const { searchParams } = new URL(req.url);
+    const idsString = searchParams.get('ids');
+    if (!idsString) {
+        return NextResponse.json({ syncedIds: [] });
+    }
+
+    const ids = idsString.split(',').map(id => id.trim()).filter(Boolean);
+    if (ids.length === 0) {
+        return NextResponse.json({ syncedIds: [] });
+    }
+
+    try {
+        const pool = await dbManager.getPool('ORION', process.env.ORION_DB_URL);
+        const placeholders = ids.map(() => '?').join(',');
+        const sql = `SELECT inventory_id FROM inventory_batches WHERE inventory_id IN (${placeholders})`;
+        const [rows]: any = await pool.execute(sql, ids);
+
+        const syncedIds = rows.map((row: any) => row.inventory_id);
+        return NextResponse.json({ syncedIds });
+    } catch (error: any) {
+        console.error("Error checking sync status:", error);
+        return NextResponse.json({ error: error.message }, { status: 500 });
+    }
+}

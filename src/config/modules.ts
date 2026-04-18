@@ -1,10 +1,14 @@
 import {
-    DashboardOutlined,
     BarChartOutlined,
-    SettingOutlined,
     GlobalOutlined,
     TeamOutlined,
-    HistoryOutlined
+    HistoryOutlined,
+    DashboardOutlined,
+    ApartmentOutlined,
+    ClusterOutlined,
+    DatabaseOutlined,
+    BarcodeOutlined,
+    GiftOutlined,
 } from '@ant-design/icons';
 import React from 'react';
 
@@ -12,7 +16,7 @@ export interface ModuleDefinition {
     id: string;
     title: string;
     path: string;
-    category: 'Dashboard' | 'GTP Proxy' | 'Reports' | 'Monitoring' | 'User Management' | 'Audit Trail' | 'Configuration';
+    category: string;
     icon?: React.ReactNode;
     permission: string;
     schema?: string;
@@ -22,14 +26,10 @@ export interface ModuleDefinition {
 
 
 export const MODULE_REGISTRY: ModuleDefinition[] = [
-    {
-        id: 'dashboard',
-        title: 'Dashboard',
-        path: '/dashboard',
-        category: 'Dashboard',
-        permission: 'dashboard:read',
-        dbPool: 'CORE'
-    },
+    // ----------------------------------------------------------------
+    // Platform-level modules (generic, always present)
+    // Product-specific modules are injected by their deploy.sh script
+    // ----------------------------------------------------------------
     {
         id: 'kpi-report',
         title: 'Telecom KPI',
@@ -37,50 +37,6 @@ export const MODULE_REGISTRY: ModuleDefinition[] = [
         category: 'Reports',
         permission: 'report:telecom:read',
         schema: '/schemas/kpi-report-v2.json'
-    },
-    {
-        id: 'gtp-session-stats',
-        title: 'GTP Session Stats',
-        path: '/reports/gtp-session-stats',
-        category: 'Reports',
-        permission: 'report:gtp:read',
-        schema: '/schemas/gtp-session-stats.json'
-    },
-    {
-        id: 'node-config',
-        title: 'Network Nodes',
-        path: '/configuration/nodes',
-        category: 'Configuration',
-        permission: 'node:read',
-        schema: '/schemas/node-config.json',
-        dbPool: 'CORE'
-    },
-    {
-        id: 'gtp-imsi-range',
-        title: 'GTP IMSI Ranges',
-        path: '/configuration/gtp-imsi-range',
-        category: 'GTP Proxy',
-        permission: 'gtp:imsi:manage',
-        schema: '/schemas/gtp-imsi-range.json',
-        dbPool: 'GTP_PROXY'
-    },
-    {
-        id: 'gtp-mccmnc-mapping',
-        title: 'MCC-MNC Mappings',
-        path: '/configuration/gtp-mccmnc-mapping',
-        category: 'GTP Proxy',
-        permission: 'gtp:mapping:manage',
-        schema: '/schemas/gtp-mccmnc-mapping.json',
-        dbPool: 'GTP_PROXY'
-    },
-    {
-        id: 'gtp-session-mgmt',
-        title: 'GTP Session Mgmt',
-        path: '/configuration/gtp-session-mgmt',
-        category: 'GTP Proxy',
-        permission: 'gtp:session:manage',
-        schema: '/schemas/gtp-session-mgmt.json',
-        dbPool: 'GTP_PROXY'
     },
     {
         id: 'user-management',
@@ -96,7 +52,7 @@ export const MODULE_REGISTRY: ModuleDefinition[] = [
         title: 'Audit Trail',
         path: '/admin/audit-trail',
         category: 'Audit Trail',
-        permission: 'user:manage',
+        permission: 'audit:read',
         schema: '/schemas/audit-trail.json',
         dbPool: 'CORE'
     },
@@ -105,7 +61,7 @@ export const MODULE_REGISTRY: ModuleDefinition[] = [
         title: 'Server Monitoring',
         path: '/monitor/server',
         category: 'Monitoring',
-        permission: 'grafana',
+        permission: 'grafana:server',
         externalUrl: process.env.NEXT_PUBLIC_GRAFANA_URL_SERVER
     },
     {
@@ -113,7 +69,7 @@ export const MODULE_REGISTRY: ModuleDefinition[] = [
         title: 'Database Monitoring',
         path: '/monitor/database',
         category: 'Monitoring',
-        permission: 'grafana',
+        permission: 'grafana:db',
         externalUrl: process.env.NEXT_PUBLIC_GRAFANA_URL_DB
     },
     {
@@ -121,18 +77,103 @@ export const MODULE_REGISTRY: ModuleDefinition[] = [
         title: 'Application Metrics',
         path: '/monitor/application',
         category: 'Monitoring',
-        permission: 'grafana',
+        permission: 'grafana:app',
         externalUrl: process.env.NEXT_PUBLIC_GRAFANA_URL_APP
-    }
+    },
+    // PRODUCT_MODULES_START — do not remove this comment, used by deploy scripts
+    // --- Orion CMP Modules (injected by deploy.sh) ---
+    {
+        id: 'orion-dashboard',
+        title: 'Dashboard',
+        path: '/dashboard',
+        category: 'OrionDashboard',
+        permission: 'orion:dashboard:read',
+        schema: '/schemas/orion-dashboard.json',
+        dbPool: 'ORION'
+    },
+    {
+        id: 'orion-accounts',
+        title: 'Accounts',
+        path: '/accounts',
+        category: 'OrionAccounts',
+        permission: 'orion:account:manage',
+        schema: '/schemas/orion-accounts.json',
+        dbPool: 'ORION'
+    },
+    {
+        id: 'orion-aggregators',
+        title: 'Aggregator Management',
+        path: '/aggregators',
+        category: 'OrionAggregators',
+        permission: 'orion:aggregator:manage',
+        schema: '/schemas/orion-aggregators.json',
+        dbPool: 'ORION'
+    },
+    {
+        id: 'orion-users',
+        title: 'Users',
+        path: '/users',
+        category: 'OrionUsers',
+        permission: 'orion:user:manage',
+        schema: '/schemas/orion-users.json',
+        dbPool: 'ORION'
+    },
+    {
+        id: 'orion-inventory',
+        title: 'eSIM Inventory',
+        path: '/inventory',
+        category: 'OrionInventory',
+        permission: 'orion:inventory:manage',
+        schema: '/schemas/orion-inventory.json',
+        dbPool: 'ORION'
+    },
+    {
+        id: 'orion-esims',
+        title: 'SIM Management',
+        path: '/esims',
+        category: 'OrionSIMs',
+        permission: 'orion:esim:manage',
+        schema: '/schemas/orion-esims.json',
+        dbPool: 'ORION'
+    },
+    {
+        id: 'orion-packages',
+        title: 'Package Management',
+        path: '/packages',
+        category: 'OrionPackages',
+        permission: 'orion:package:manage',
+        dbPool: 'ORION'
+    },
+    {
+        id: 'api-keys',
+        title: 'Developer API Key',
+        path: '/admin/api-keys',
+        category: 'Administration',
+        permission: 'api-key:manage',
+        schema: '/schemas/api-keys.json',
+        dbPool: 'CORE'
+    },
+    // PRODUCT_MODULES_END
 ];
 
 export const CATEGORIES = [
-    { id: 'Dashboard', title: 'Dashboard', icon: React.createElement(DashboardOutlined) },
+    // ----------------------------------------------------------------
+    // Platform-level categories (generic)
+    // Product-specific categories are injected by their deploy.sh script
+    // ----------------------------------------------------------------
     { id: 'Reports', title: 'Reports', icon: React.createElement(BarChartOutlined) },
-    { id: 'Configuration', title: 'Configuration', icon: React.createElement(SettingOutlined) },
-    { id: 'GTP Proxy', title: 'GTP Proxy', icon: React.createElement(GlobalOutlined) },
     { id: 'User Management', title: 'User Management', icon: React.createElement(TeamOutlined) },
+    { id: 'Administration', title: 'Administration', icon: React.createElement(HistoryOutlined) },
     { id: 'Audit Trail', title: 'Audit Trail', icon: React.createElement(HistoryOutlined) },
-    { id: 'Monitoring', title: 'Monitoring', icon: React.createElement(GlobalOutlined) }
+    { id: 'Monitoring', title: 'Monitoring', icon: React.createElement(GlobalOutlined) },
+    // PRODUCT_CATEGORIES_START — do not remove this comment, used by deploy scripts
+    // --- Orion CMP Categories (injected by deploy.sh) ---
+    { id: 'OrionDashboard', title: 'Dashboard', icon: React.createElement(DashboardOutlined) },
+    { id: 'OrionAccounts', title: 'Accounts', icon: React.createElement(ApartmentOutlined) },
+    { id: 'OrionAggregators', title: 'Aggregators', icon: React.createElement(ClusterOutlined) },
+    { id: 'OrionInventory', title: 'eSIM Inventory', icon: React.createElement(DatabaseOutlined) },
+    { id: 'OrionSIMs', title: 'SIM Management', icon: React.createElement(BarcodeOutlined) },
+    { id: 'OrionPackages', title: 'Packages', icon: React.createElement(GiftOutlined) },
+    { id: 'OrionUsers', title: 'Orion Users', icon: React.createElement(TeamOutlined) },
+    // PRODUCT_CATEGORIES_END
 ];
-

@@ -89,7 +89,7 @@ graph TD
 1.  Create a **MySQL 8.0+** instance in the private subnet.
 2.  Assign the `db-sg` security group.
 3.  Create two databases: `oam_portal` and `keycloak`.
-4.  **Initialize Schema**: Connect to the `oam_portal` database and run the initialization script provided in [`db/init.sql`](file:///home/guest/Desktop/Code/UIFrameWork/db/init.sql).
+4.  **Initialize Schema**: Connect to the `oam_portal` database and run the initialization script provided in [`db/init.sql`](file:///home/guest/Desktop/Code/SPAR-UI-Engine/db/init.sql).
 
 ---
 

@@ -1,13 +1,12 @@
 "use client";
 import React from "react";
 import { AntdRegistry } from "@ant-design/nextjs-registry";
-import { ConfigProvider, theme } from "antd";
 import { AuthProvider } from "@/core/auth/AuthProvider";
 import { SessionProvider } from "next-auth/react";
 import { Nunito_Sans } from "next/font/google";
-import { brandingConfig } from "@/branding.config";
-import "./globals.css";
+import { ThemeProvider } from "@/context/ThemeContext";
 import { TenantProvider } from "@/context/TenantContext";
+import "./globals.css";
 
 const nunito = Nunito_Sans({
   subsets: ["latin"],
@@ -22,42 +21,19 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en">
-      <body className={nunito.className} style={{ margin: 0, background: brandingConfig.theme.background }}>
+      <body className={nunito.className} style={{ margin: 0 }}>
         <SessionProvider>
           <AntdRegistry>
-            <ConfigProvider
-              theme={{
-                algorithm: theme.darkAlgorithm,
-                token: {
-                  colorPrimary: brandingConfig.theme.primaryColor,
-                  colorBgBase: brandingConfig.theme.background,
-                  colorBgContainer: brandingConfig.theme.componentBg,
-                  colorTextBase: brandingConfig.theme.textColor,
-                  fontFamily: nunito.style.fontFamily,
-                },
-                components: {
-                  Layout: {
-                    siderBg: '#1e1e1e',
-                    bodyBg: brandingConfig.theme.background,
-                    headerBg: brandingConfig.theme.componentBg,
-                  },
-                  Menu: {
-                    darkItemBg: '#1e1e1e',
-                    darkSubMenuItemBg: brandingConfig.theme.sidebarBg,
-                  }
-                }
-              }}
-            >
+            <ThemeProvider>
               <AuthProvider>
                 <TenantProvider>
                   {children}
                 </TenantProvider>
               </AuthProvider>
-            </ConfigProvider>
+            </ThemeProvider>
           </AntdRegistry>
         </SessionProvider>
       </body>
     </html>
   );
 }
-
