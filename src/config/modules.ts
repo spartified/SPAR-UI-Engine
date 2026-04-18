@@ -28,16 +28,7 @@ export interface ModuleDefinition {
 export const MODULE_REGISTRY: ModuleDefinition[] = [
     // ----------------------------------------------------------------
     // Platform-level modules (generic, always present)
-    // Product-specific modules are injected by their deploy.sh script
     // ----------------------------------------------------------------
-    {
-        id: 'kpi-report',
-        title: 'Telecom KPI',
-        path: '/reports/kpi',
-        category: 'Reports',
-        permission: 'report:telecom:read',
-        schema: '/schemas/kpi-report-v2.json'
-    },
     {
         id: 'user-management',
         title: 'User Management',
