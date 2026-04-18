@@ -25,6 +25,8 @@ services:
       - NEXT_PUBLIC_GRAFANA_URL_APP=${GRAFANA_URL_APP}
     depends_on:
       - keycloak
+    networks:
+      - tcep-shared
     restart: always
 
   keycloak:
@@ -44,4 +46,11 @@ services:
       - KC_HOSTNAME_STRICT_HTTPS=false
       - KEYCLOAK_ADMIN=${KC_ADMIN}
       - KEYCLOAK_ADMIN_PASSWORD=${KC_ADMIN_PASS}
+    networks:
+      - tcep-shared
     restart: always
+
+networks:
+  tcep-shared:
+    external: true
+    name: tcep_tcep-network
