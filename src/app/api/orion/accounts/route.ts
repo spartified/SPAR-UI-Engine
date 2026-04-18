@@ -124,8 +124,9 @@ export async function PUT(req: NextRequest) {
             const pool = await dbManager.getPool(poolName, connectionString);
 
             if (data.type === 'ROOT') {
-                const idValues = Object.values(_identifiers);
-                const [existingRoot] = await pool.execute(`SELECT id FROM ${schema.tableName} WHERE type = 'ROOT' AND status != 'DELETED' AND id != ? LIMIT 1`, [idValues[0]]);
+                const idValues = Object.values(_identifiers || {});
+                const currentId = idValues.length > 0 ? idValues[0] : null;
+                const [existingRoot] = await pool.execute(`SELECT id FROM ${schema.tableName} WHERE type = 'ROOT' AND status != 'DELETED' AND id != ? LIMIT 1`, [currentId as any]);
                 if ((existingRoot as any[]).length > 0) {
                     return NextResponse.json({ error: "A Root account already exists. Only one Root account is permitted." }, { status: 400 });
                 }
