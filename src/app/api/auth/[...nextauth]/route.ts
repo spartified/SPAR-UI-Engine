@@ -108,7 +108,7 @@ export const authOptions: NextAuthOptions = {
                             if (poolName === 'CORE') continue;
                             const poolConnString = (process.env as any)[`${poolName}_DB_URL`];
 
-                            if (poolConnString) {
+                            if (typeof poolConnString === 'string' && typeof poolName === 'string') {
                                 try {
                                     const pPool = await dbManager.getPool(poolName, poolConnString);
                                     const [rows]: any = await pPool.execute(

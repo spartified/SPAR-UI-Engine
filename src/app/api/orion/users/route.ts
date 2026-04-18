@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth/next";
-import { authOptions } from "../../auth/[...nextauth]/route";
+import { authOptions } from "@/app/api/auth/[...nextauth]/route";
 import { dbManager } from "@/core/db/manager";
 import { AuditLogger } from "@/core/utils/audit-logger";
 import { KeycloakAdmin } from "@/core/utils/keycloak-admin";
@@ -23,7 +23,6 @@ export async function GET(req: NextRequest) {
             const orionPool = await dbManager.getPool(poolName, connectionString);
             const corePool = await dbManager.getPool('CORE', coreConnectionString);
 
-            // Corrected field name: productContexts.ORION.accountId
             const userAccountId = (session?.user as any)?.productContexts?.ORION?.accountId || (session?.user as any)?.account_id;
             let whereClause = "";
             if (userAccountId) {
@@ -76,7 +75,6 @@ export async function POST(req: NextRequest) {
         return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
     }
 
-    // Hierarchy Guard
     const userAccountId = (session?.user as any)?.productContexts?.ORION?.accountId || (session?.user as any)?.account_id;
     if (userAccountId) {
         const { getAccountHierarchy } = await import("@/core/utils/hierarchy");
@@ -108,13 +106,11 @@ export async function POST(req: NextRequest) {
             const orionPool = await dbManager.getPool(poolName, connectionString);
             const corePool = await dbManager.getPool('CORE', coreConnectionString);
 
-            // 2. Provision in CORE DB
             await corePool.execute(
                 "INSERT INTO users (id, username, name, email, role, permissions) VALUES (?, ?, ?, ?, ?, ?) ON DUPLICATE KEY UPDATE updated_at = CURRENT_TIMESTAMP, role = VALUES(role), permissions = VALUES(permissions)",
                 [keycloakId, data.email, `${data.first_name} ${data.last_name || ''}`.trim(), data.email, data.role || 'viewer', JSON.stringify(data.permissions || [])]
             );
 
-            // 3. Insert into ORION DB
             const { role, permissions, ...orionData } = data;
             const keys = Object.keys(orionData);
             const values = Object.values(orionData);
@@ -150,7 +146,6 @@ export async function PUT(req: NextRequest) {
         const { _identifiers, role, permissions, ...data } = body;
         const email = _identifiers.email || data.email;
 
-        // Hierarchy Guard
         const userAccountId = (session?.user as any)?.productContexts?.ORION?.accountId || (session?.user as any)?.account_id;
         if (userAccountId && data.account_id) {
             const { getAccountHierarchy } = await import("@/core/utils/hierarchy");

@@ -6,15 +6,6 @@ import schemaRaw from "@/schemas/orion-esims.json";
 
 const schema = schemaRaw as any;
 
-let mockEsims = [
-    { id: 1, iccid: '8901234560000000001', batch_id: 1, account_id: 1, status: 'ACTIVATED', assigned_user_id: null, created_at: '2025-01-15T00:00:00Z', updated_at: '2025-03-01T00:00:00Z' },
-    { id: 2, iccid: '8901234560000000002', batch_id: 1, account_id: 1, status: 'ACTIVATED', assigned_user_id: null, created_at: '2025-01-15T00:00:00Z', updated_at: '2025-03-01T00:00:00Z' },
-    { id: 3, iccid: '8901234560000000003', batch_id: 1, account_id: 2, status: 'SUSPENDED', assigned_user_id: null, created_at: '2025-01-15T00:00:00Z', updated_at: '2025-03-15T00:00:00Z' },
-    { id: 4, iccid: '8901234560000000004', batch_id: 1, account_id: 2, status: 'AVAILABLE', assigned_user_id: null, created_at: '2025-01-15T00:00:00Z', updated_at: '2025-01-15T00:00:00Z' },
-    { id: 5, iccid: '8901234560000001001', batch_id: 2, account_id: 2, status: 'ALLOCATED', assigned_user_id: null, created_at: '2025-02-20T00:00:00Z', updated_at: '2025-02-20T00:00:00Z' },
-    { id: 6, iccid: '8901234560000002001', batch_id: 3, account_id: 1, status: 'DEACTIVATED', assigned_user_id: null, created_at: '2025-03-10T00:00:00Z', updated_at: '2025-03-25T00:00:00Z' },
-];
-
 export async function GET(req: NextRequest) {
     const auth = await authenticateApiRequest(req);
     if (!auth.authorized || !auth.permissions?.includes('orion:esim:manage')) {
@@ -33,7 +24,6 @@ export async function GET(req: NextRequest) {
                 LEFT JOIN package_templates pt ON e.package_id = pt.id
                 LEFT JOIN accounts a ON e.account_id = a.id
             `;
-            const values = [];
 
             if (auth.accountId !== null && auth.accountId !== undefined) {
                 const { getAccountHierarchy } = await import("@/core/utils/hierarchy");
@@ -43,17 +33,14 @@ export async function GET(req: NextRequest) {
                 }
             }
 
-            const [rows] = await pool.execute(query, values);
+            const [rows] = await pool.execute(query);
             return NextResponse.json(rows);
         }
     } catch (error) {
         console.error("Database Connection Failed (GET esims):", error);
-        if (process.env.NODE_ENV === 'production') {
-            return NextResponse.json({ error: "Database Connection Failed" }, { status: 500 });
-        }
+        return NextResponse.json({ error: "Database Connection Failed" }, { status: 500 });
     }
-
-    return NextResponse.json(mockEsims);
+    return NextResponse.json([]);
 }
 
 export async function POST(req: NextRequest) {
@@ -92,10 +79,7 @@ export async function POST(req: NextRequest) {
         console.error("Database Save Failed (POST esims):", error);
         return NextResponse.json({ error: error.message || "Database Save Failed" }, { status: 500 });
     }
-
-    const newEsim = { id: Math.max(...mockEsims.map(e => e.id)) + 1, ...data, created_at: new Date().toISOString(), updated_at: new Date().toISOString() };
-    mockEsims.push(newEsim);
-    return NextResponse.json(newEsim, { status: 201 });
+    return NextResponse.json({ error: "Operation Failed" }, { status: 500 });
 }
 
 export async function PUT(req: NextRequest) {
@@ -132,8 +116,7 @@ export async function PUT(req: NextRequest) {
         console.error("Database Update Failed (PUT esims):", error);
         return NextResponse.json({ error: error.message || "Database Update Failed" }, { status: 500 });
     }
-
-    return NextResponse.json({ error: "DB Not Configured" }, { status: 500 });
+    return NextResponse.json({ error: "Operation Failed" }, { status: 500 });
 }
 
 export async function DELETE(req: NextRequest) {
@@ -168,6 +151,5 @@ export async function DELETE(req: NextRequest) {
         console.error("Database Delete Failed (DELETE esims):", error);
         return NextResponse.json({ error: error.message || "Database Delete Failed" }, { status: 500 });
     }
-
-    return NextResponse.json({ error: "DB Not Configured" }, { status: 500 });
+    return NextResponse.json({ error: "Operation Failed" }, { status: 500 });
 }

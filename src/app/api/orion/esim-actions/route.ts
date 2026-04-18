@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth/next";
-import { authOptions } from "../../auth/[...nextauth]/route";
+import { authOptions } from "@/app/api/auth/[...nextauth]/route";
 import { dbManager } from "@/core/db/manager";
 import { AuditLogger } from "@/core/utils/audit-logger";
 
@@ -56,16 +56,16 @@ export async function POST(req: NextRequest) {
                 await pool.execute(updateSql, [newStatus, ...esim_ids]);
             }
 
-            // Insert lifecycle action records
-            for (const esimId of esim_ids) {
-                const insertSql = `INSERT INTO esim_lifecycle_actions (esim_id, action, performed_by, account_id, status, request_payload, created_at) VALUES (?, ?, ?, NULL, 'SUCCESS', ?, NOW())`;
-                await pool.execute(insertSql, [
-                    esimId,
-                    action,
-                    userId,
-                    JSON.stringify({ action, esim_ids }),
-                ]);
-            }
+            // Insert lifecycle action records inside a single query
+            const placeholderGroups = esim_ids.map(() => `(?, ?, ?, NULL, 'SUCCESS', ?, NOW())`).join(', ');
+            const bulkInsertSql = `INSERT INTO esim_lifecycle_actions (esim_id, action, performed_by, account_id, status, request_payload, created_at) VALUES ${placeholderGroups}`;
+            const bulkValues = esim_ids.flatMap(id => [
+                id,
+                action,
+                userId,
+                JSON.stringify({ action, esim_ids }),
+            ]);
+            await pool.execute(bulkInsertSql, bulkValues);
 
             await AuditLogger.log({
                 username,
@@ -90,16 +90,16 @@ export async function POST(req: NextRequest) {
             const connectionString = (process.env as any)[`${DB_POOL}_DB_URL`];
             if (connectionString) {
                 const pool = await dbManager.getPool(DB_POOL, connectionString);
-                for (const esimId of esim_ids) {
-                    const insertSql = `INSERT INTO esim_lifecycle_actions (esim_id, action, performed_by, account_id, status, request_payload, response_payload, created_at) VALUES (?, ?, ?, NULL, 'FAILED', ?, ?, NOW())`;
-                    await pool.execute(insertSql, [
-                        esimId,
-                        action,
-                        userId,
-                        JSON.stringify({ action, esim_ids }),
-                        JSON.stringify({ error: error.message }),
-                    ]);
-                }
+                const placeholderGroupsFail = esim_ids.map(() => `(?, ?, ?, NULL, 'FAILED', ?, ?, NOW())`).join(', ');
+                const bulkInsertSqlFail = `INSERT INTO esim_lifecycle_actions (esim_id, action, performed_by, account_id, status, request_payload, response_payload, created_at) VALUES ${placeholderGroupsFail}`;
+                const bulkValuesFail = esim_ids.flatMap(id => [
+                    id,
+                    action,
+                    userId,
+                    JSON.stringify({ action, esim_ids }),
+                    JSON.stringify({ error: error.message }),
+                ]);
+                await pool.execute(bulkInsertSqlFail, bulkValuesFail);
             }
         } catch (logError) {
             console.error("Failed to log lifecycle action:", logError);

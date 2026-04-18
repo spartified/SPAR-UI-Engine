@@ -68,7 +68,7 @@ export async function authenticateApiRequest(req: NextRequest): Promise<ApiAuthR
                     for (const poolName of pools) {
                         if (poolName === 'CORE') continue;
                         const poolConnString = (process.env as any)[`${poolName}_DB_URL`];
-                        if (poolConnString) {
+                        if (typeof poolConnString === 'string' && typeof poolName === 'string') {
                             try {
                                 const pPool = await dbManager.getPool(poolName, poolConnString);
                                 const [pRows]: any = await pPool.execute(

@@ -1,0 +1,95 @@
+{
+    "title": "Orion User Management",
+    "endpoint": "/api/orion/users",
+    "permission": "orion:user:manage",
+    "dbPool": "ORION",
+    "tableName": "users",
+    "fields": [
+        {
+            "name": "id",
+            "label": "ID",
+            "type": "number",
+            "primary": true,
+            "hidden": true,
+            "editable": false
+        },
+        {
+            "name": "first_name",
+            "label": "First Name",
+            "type": "text",
+            "required": true,
+            "editable": true
+        },
+        {
+            "name": "last_name",
+            "label": "Last Name",
+            "type": "text",
+            "required": true,
+            "editable": true
+        },
+        {
+            "name": "email",
+            "label": "Email",
+            "type": "email",
+            "primary": true,
+            "required": true,
+            "editable": true
+        },
+        {
+            "name": "account_id",
+            "label": "Orion Account",
+            "type": "select",
+            "lookup": {
+                "dbPool": "ORION",
+                "query": "SELECT id AS value, name AS label FROM accounts WHERE status = 'ACTIVE'"
+            },
+            "required": true,
+            "editable": true
+        },
+        {
+            "name": "role",
+            "label": "System Role",
+            "type": "select",
+            "options": [
+                {
+                    "label": "Admin",
+                    "value": "admin"
+                },
+                {
+                    "label": "Viewer",
+                    "value": "viewer"
+                }
+            ],
+            "required": true,
+            "editable": true
+        },
+        {
+            "name": "permissions",
+            "label": "Granular Permissions",
+            "type": "multi-select",
+            "lookup": {
+                "dbPool": "SYSTEM",
+                "query": "available_permissions"
+            },
+            "required": false,
+            "editable": true
+        },
+        {
+            "name": "status",
+            "label": "Status",
+            "type": "select",
+            "options": [
+                {
+                    "label": "Active",
+                    "value": "ACTIVE"
+                },
+                {
+                    "label": "Inactive",
+                    "value": "INACTIVE"
+                }
+            ],
+            "required": true,
+            "editable": true
+        }
+    ]
+}

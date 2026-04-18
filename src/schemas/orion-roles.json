@@ -1,0 +1,51 @@
+{
+    "title": "Roles & Permissions",
+    "tableName": "roles",
+    "dbPool": "ORION",
+    "primaryKey": "id",
+    "columns": [
+        {
+            "title": "ID",
+            "dataIndex": "id",
+            "key": "id",
+            "type": "number",
+            "hidden": true
+        },
+        {
+            "title": "Role Name",
+            "dataIndex": "name",
+            "key": "name",
+            "type": "text",
+            "required": true,
+            "editable": true
+        },
+        {
+            "title": "Description",
+            "dataIndex": "description",
+            "key": "description",
+            "type": "text",
+            "editable": true
+        },
+        {
+            "title": "Account ID",
+            "dataIndex": "account_id",
+            "key": "account_id",
+            "type": "number",
+            "editable": true
+        }
+    ],
+    "actions": {
+        "create": {
+            "enabled": true,
+            "permission": "orion:role:manage"
+        },
+        "update": {
+            "enabled": true,
+            "permission": "orion:role:manage"
+        },
+        "delete": {
+            "enabled": true,
+            "permission": "orion:role:manage"
+        }
+    }
+}

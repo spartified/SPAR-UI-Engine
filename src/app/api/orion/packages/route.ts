@@ -16,7 +16,6 @@ export async function GET(req: NextRequest) {
             FROM package_templates pt
             LEFT JOIN accounts a ON pt.account_id = a.id
         `;
-        let params: any[] = [];
 
         if (auth.accountId !== null && auth.accountId !== undefined) {
             const { getAccountHierarchy } = await import("@/core/utils/hierarchy");
@@ -28,7 +27,7 @@ export async function GET(req: NextRequest) {
 
         query += ` ORDER BY pt.created_at DESC`;
 
-        const [rows]: any = await pool.execute(query, params);
+        const [rows]: any = await pool.execute(query);
         return NextResponse.json(rows);
     } catch (error: any) {
         return NextResponse.json({ error: error.message }, { status: 500 });
@@ -78,14 +77,14 @@ export async function POST(req: NextRequest) {
         const pool = await dbManager.getPool('ORION', process.env.ORION_DB_URL);
         const params = [
             data.name || null,
-            data.account_id || null,
+            data.account_id || data.aggregator_account_id || null, // Fallback if necessary
             data.aggregator_account_id || null,
             data.data_limit_mb || 0,
             data.duration_seconds || 0,
             data.sms_limit || 0,
             data.voice_limit || 0,
             data.traffic_policy || 0,
-            'IN_SYNC', // Set directly to IN_SYNC
+            'IN_SYNC',
             remoteId,
             data.earliest_available_date || null,
             data.latest_available_date || null
