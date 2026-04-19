@@ -6,8 +6,8 @@
 set -e
 
 # Configuration
-UI_ENGINE_DIR="/home/guest/Desktop/Code/SPAR-UI-Engine"
-ORION_PORTAL_DIR="/home/guest/Desktop/Code/SPAR-ORION-Portal"
+UI_ENGINE_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+ORION_PORTAL_DIR="$(cd "$UI_ENGINE_DIR/../SPAR-ORION-Portal" && pwd)"
 
 echo "=== Starting Production Deployment Preparation ==="
 
