@@ -13,6 +13,7 @@ services:
       - CORE_DB_URL=${CORE_DB_URL}
       - GTP_PROXY_DB_URL=${GTP_PROXY_DB_URL}
       - ORION_DB_URL=${ORION_DB_URL}
+      - AGG_SERVICE_URL=${AGG_SERVICE_URL}
       - AUTH_MODE=keycloak
       - NEXT_PUBLIC_AUTH_MODE=keycloak
       - NEXTAUTH_URL=${NEXTAUTH_URL}
@@ -41,10 +42,11 @@ services:
       - KC_DB_USERNAME=${KC_DB_USER}
       - KC_DB_PASSWORD=${KC_DB_PASS}
       - KC_HOSTNAME=${KC_HOSTNAME}
+      - KC_HOSTNAME_PORT=8080
       - KC_HOSTNAME_STRICT=false
+      - KC_HOSTNAME_STRICT_BACKCHANNEL=false
       - KC_HTTP_ENABLED=true
       - KC_HOSTNAME_STRICT_HTTPS=false
-      - KC_PROXY=edge
       - KEYCLOAK_ADMIN=${KC_ADMIN}
       - KEYCLOAK_ADMIN_PASSWORD=${KC_ADMIN_PASS}
     networks:
