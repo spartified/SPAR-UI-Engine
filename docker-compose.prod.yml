@@ -45,6 +45,7 @@ services:
       - KC_HOSTNAME_STRICT=false
       - KC_HTTP_ENABLED=true
       - KC_HOSTNAME_STRICT_HTTPS=false
+      - KC_PROXY=edge
       - KEYCLOAK_ADMIN=${KC_ADMIN}
       - KEYCLOAK_ADMIN_PASSWORD=${KC_ADMIN_PASS}
     networks:
