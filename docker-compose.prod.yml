@@ -40,7 +40,6 @@ services:
       - KC_DB_URL=${KC_DB_URL}
       - KC_DB_USERNAME=${KC_DB_USER}
       - KC_DB_PASSWORD=${KC_DB_PASS}
-      - KC_HOSTNAME=${KC_HOSTNAME}
       - KC_HTTP_RELATIVE_PATH=/auth
       - KC_HOSTNAME_STRICT=false
       - KC_HOSTNAME_URL=http://${KC_HOSTNAME}:8080/auth
