@@ -1,5 +1,4 @@
 import crypto from "crypto";
-import { dbManager } from "../db/manager";
 
 export interface TelnaPackageTemplate {
     name: string;
@@ -21,44 +20,21 @@ export interface TelnaPackageTemplate {
 }
 
 class TelnaService {
-    private async getAggregatorConfig(aggregatorAccountId: number | string) {
-        if (aggregatorAccountId === undefined || aggregatorAccountId === null) {
-            throw new Error("aggregatorAccountId is required for Telna configuration");
-        }
-        const pool = await dbManager.getPool('ORION', process.env.ORION_DB_URL);
-
-        let query = 'SELECT * FROM aggregator_api_keys WHERE id = ?';
-        let params: any[] = [aggregatorAccountId];
-
-        if (typeof aggregatorAccountId === 'string' && isNaN(Number(aggregatorAccountId))) {
-            query = 'SELECT * FROM aggregator_api_keys WHERE name LIKE ?';
-            params = [`%${aggregatorAccountId}%`];
-        }
-
-        const [rows]: any = await pool.execute(query, params);
-        if (rows.length === 0) throw new Error(`Aggregator account "${aggregatorAccountId}" not found`);
-        return rows[0];
+    private getBaseUrl() {
+        return process.env.AGG_SERVICE_URL || "http://localhost:8005/portal";
     }
 
-    private getApiToken(aggregator: any) {
-        // In a real system, we'd decrypt the key or use a secure vault.
-        // For now, we use the provided token pattern or the hash if it were the key.
-        // The previous implementation used a hardcoded token for Telna.
-        return "eyJvcmciOiI2Mjg2MWUxZmY4YjU3ZDAwMDEzNmI1NjkiLCJpZCI6ImQ0YjE1MzJiZmJhMTQ0NGZiOGVjOGM2OTNmNDliNmRhIiwiaCI6Im11cm11cjY0In0=";
+    private getHeaders(aggregatorId: number | string) {
+        return {
+            'Accept': 'application/json',
+            'aggregator-id': String(aggregatorId)
+        };
     }
 
     public async getInventories(aggregatorAccountId: number) {
-        const aggregator = await this.getAggregatorConfig(aggregatorAccountId);
-        const baseUrl = aggregator.base_url || "https://developer-api.telna.com/v2.1";
-        const token = this.getApiToken(aggregator);
-
-        const response = await fetch(`${baseUrl}/inventory/inventories`, {
+        const response = await fetch(`${this.getBaseUrl()}/v1/inventory/inventories`, {
             method: 'GET',
-            headers: {
-                'Accept': 'application/json',
-                'Authorization': `Bearer ${token}`,
-                'Version': 'v2.1'
-            },
+            headers: this.getHeaders(aggregatorAccountId),
             signal: AbortSignal.timeout(15_000)
         });
 
@@ -70,17 +46,9 @@ class TelnaService {
     }
 
     public async getCountries(aggregatorAccountId: number) {
-        const aggregator = await this.getAggregatorConfig(aggregatorAccountId);
-        const baseUrl = aggregator.base_url || "https://developer-api.telna.com/v2.1";
-        const token = this.getApiToken(aggregator);
-
-        const response = await fetch(`${baseUrl}/core/countries?count=100&offset=0`, {
+        const response = await fetch(`${this.getBaseUrl()}/v1/core/countries?count=100&offset=0`, {
             method: 'GET',
-            headers: {
-                'Accept': 'application/json',
-                'Authorization': `Bearer ${token}`,
-                'Version': 'v2.1'
-            },
+            headers: this.getHeaders(aggregatorAccountId),
             signal: AbortSignal.timeout(15_000)
         });
 
@@ -92,19 +60,14 @@ class TelnaService {
     }
 
     public async createPackageTemplate(aggregatorAccountId: number, data: TelnaPackageTemplate) {
-        const aggregator = await this.getAggregatorConfig(aggregatorAccountId);
-        const baseUrl = aggregator.base_url || "https://developer-api.telna.com/v2.1";
-        const token = this.getApiToken(aggregator);
         const requestId = crypto.randomUUID();
 
-        // Dynamically get the first valid inventory if not provided or set to 1
         if (!data.inventory || data.inventory === 1) {
             console.log("Fetching valid inventories for aggregator...");
             try {
                 const inventoriesResult = await this.getInventories(aggregatorAccountId);
                 console.log("Raw Inventories Result:", JSON.stringify(inventoriesResult));
 
-                // Handle both array and wrapped object responses
                 const inventories = Array.isArray(inventoriesResult)
                     ? inventoriesResult
                     : (inventoriesResult.data || inventoriesResult.inventories || []);
@@ -122,9 +85,8 @@ class TelnaService {
             }
         }
 
-        console.log("Calling Telna Create Template:", { baseUrl, requestId, data });
+        console.log("Calling Aggregator Create Template:", { baseUrl: this.getBaseUrl(), requestId, data });
 
-        // Fix supported_countries if set to "WW" (invalid ISO3)
         if (data.supported_countries && (data.supported_countries.includes("WW") || data.supported_countries.length === 0)) {
             console.log("Resolving valid country codes...");
             try {
@@ -140,24 +102,20 @@ class TelnaService {
             }
         }
 
-        // Handle date fields
         const now = Date.now();
         if (!data.earliest_activation_date) data.earliest_activation_date = now;
         if (!data.earliest_available_date) data.earliest_available_date = now;
         if (!data.latest_available_date) {
-            // Default to 1 year from now
             data.latest_available_date = now + (365 * 24 * 60 * 60 * 1000);
         }
 
-        const response = await fetch(`${baseUrl}/pcr/package-templates`, {
+        const response = await fetch(`${this.getBaseUrl()}/v1/pcr/package-templates`, {
             method: 'POST',
             headers: {
+                ...this.getHeaders(aggregatorAccountId),
                 'Content-Type': 'application/json',
-                'Accept': 'application/json',
-                'Authorization': `Bearer ${token}`,
                 'Request-ID': requestId,
-                'Reference-ID': requestId,
-                'Version': 'v2.1'
+                'Reference-ID': requestId
             },
             body: JSON.stringify(data),
             signal: AbortSignal.timeout(15_000)
@@ -165,27 +123,19 @@ class TelnaService {
 
         if (!response.ok) {
             const error = await response.text();
-            console.error("Telna API Error Response:", error);
-            throw new Error(`Telna API Error: ${response.status} - ${error}`);
+            console.error("Aggregator API Error Response:", error);
+            throw new Error(`Aggregator API Error: ${response.status} - ${error}`);
         }
 
         const result = await response.json();
-        console.log("Telna API Success Result:", result);
+        console.log("Aggregator API Success Result:", result);
         return result;
     }
 
     public async getPackageTemplate(aggregatorAccountId: number, remoteId: string) {
-        const aggregator = await this.getAggregatorConfig(aggregatorAccountId);
-        const baseUrl = aggregator.base_url || "https://developer-api.telna.com/v2.1";
-        const token = this.getApiToken(aggregator);
-
-        const response = await fetch(`${baseUrl}/pcr/package-templates/${remoteId}`, {
+        const response = await fetch(`${this.getBaseUrl()}/v1/pcr/package-templates/${remoteId}`, {
             method: 'GET',
-            headers: {
-                'Accept': 'application/json',
-                'Authorization': `Bearer ${token}`,
-                'Version': 'v2.1'
-            },
+            headers: this.getHeaders(aggregatorAccountId),
             signal: AbortSignal.timeout(15_000)
         });
 
@@ -194,49 +144,36 @@ class TelnaService {
     }
 
     public async deletePackageTemplate(aggregatorAccountId: number, remoteId: string) {
-        const aggregator = await this.getAggregatorConfig(aggregatorAccountId);
-        const baseUrl = aggregator.base_url || "https://developer-api.telna.com/v2.1";
-        const token = this.getApiToken(aggregator);
-
-        const response = await fetch(`${baseUrl}/pcr/package-templates/${remoteId}`, {
+        const response = await fetch(`${this.getBaseUrl()}/v1/pcr/package-templates/${remoteId}`, {
             method: 'DELETE',
-            headers: {
-                'Authorization': `Bearer ${token}`,
-                'Version': 'v2.1'
-            },
+            headers: this.getHeaders(aggregatorAccountId),
             signal: AbortSignal.timeout(15_000)
         });
 
         if (!response.ok) {
             const error = await response.text();
-            throw new Error(`Telna API Error: ${response.status} - ${error}`);
+            throw new Error(`Aggregator API Error: ${response.status} - ${error}`);
         }
 
         return true;
     }
 
     public async subscribePackage(aggregatorAccountId: number, iccid: string, remotePackageTemplateId: string) {
-        const aggregator = await this.getAggregatorConfig(aggregatorAccountId);
-        const baseUrl = aggregator.base_url || "https://developer-api.telna.com/v2.1";
-        const token = this.getApiToken(aggregator);
         const requestId = crypto.randomUUID();
-
         const data = {
             sim: iccid,
             package_template: remotePackageTemplateId
         };
 
-        console.log("Calling Telna Subscribe Package:", { baseUrl, iccid, remotePackageTemplateId });
+        console.log("Calling Aggregator Subscribe Package:", { baseUrl: this.getBaseUrl(), iccid, remotePackageTemplateId });
 
-        const response = await fetch(`${baseUrl}/pcr/packages`, {
+        const response = await fetch(`${this.getBaseUrl()}/v1/pcr/packages`, {
             method: 'POST',
             headers: {
+                ...this.getHeaders(aggregatorAccountId),
                 'Content-Type': 'application/json',
-                'Accept': 'application/json',
-                'Authorization': `Bearer ${token}`,
                 'Request-ID': requestId,
-                'Reference-ID': requestId,
-                'Version': 'v2.1'
+                'Reference-ID': requestId
             },
             body: JSON.stringify(data),
             signal: AbortSignal.timeout(15_000)
@@ -244,47 +181,33 @@ class TelnaService {
 
         if (!response.ok) {
             const error = await response.text();
-            console.error("Telna Subscription API Error:", error);
-            throw new Error(`Telna Subscription Failed: ${response.status} - ${error}`);
+            console.error("Aggregator Subscription API Error:", error);
+            throw new Error(`Aggregator Subscription Failed: ${response.status} - ${error}`);
         }
 
         return await response.json();
     }
 
     public async deletePackage(aggregatorAccountId: number, remotePackageId: string) {
-        const aggregator = await this.getAggregatorConfig(aggregatorAccountId);
-        const baseUrl = aggregator.base_url || "https://developer-api.telna.com/v2.1";
-        const token = this.getApiToken(aggregator);
-
-        const response = await fetch(`${baseUrl}/pcr/packages/${remotePackageId}`, {
+        const response = await fetch(`${this.getBaseUrl()}/v1/pcr/packages/${remotePackageId}`, {
             method: 'DELETE',
-            headers: {
-                'Authorization': `Bearer ${token}`,
-                'Version': 'v2.1'
-            },
+            headers: this.getHeaders(aggregatorAccountId),
             signal: AbortSignal.timeout(15_000)
         });
 
         if (!response.ok) {
             const error = await response.text();
-            throw new Error(`Telna Deletion Failed: ${response.status} - ${error}`);
+            throw new Error(`Aggregator Deletion Failed: ${response.status} - ${error}`);
         }
 
         return true;
     }
 
     public async getEuiccProfile(aggregatorAccountId: number | string, iccid: string) {
-        const aggregator = await this.getAggregatorConfig(aggregatorAccountId);
-        const baseUrl = aggregator.base_url || "https://developer-api.telna.com/v2.1";
-        const token = this.getApiToken(aggregator);
-
-        const response = await fetch(`${baseUrl}/esim-rsp/euicc-profiles/${iccid}`, {
+        // Correct path mapping based on Swagger json provided earlier
+        const response = await fetch(`${this.getBaseUrl()}/v1/esim-rsp/euicc-profiles/${iccid}`, {
             method: 'GET',
-            headers: {
-                'Accept': 'application/json',
-                'Authorization': `Bearer ${token}`,
-                'Version': 'v2.1'
-            },
+            headers: this.getHeaders(aggregatorAccountId),
             signal: AbortSignal.timeout(15_000)
         });
 
