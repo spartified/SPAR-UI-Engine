@@ -32,7 +32,7 @@ services:
   keycloak:
     image: quay.io/keycloak/keycloak:22.0.1
     container_name: keycloak
-    command: start-dev
+    command: start-dev --http-relative-path /auth
     ports:
       - "8080:8080"
     environment:
@@ -40,10 +40,8 @@ services:
       - KC_DB_URL=${KC_DB_URL}
       - KC_DB_USERNAME=${KC_DB_USER}
       - KC_DB_PASSWORD=${KC_DB_PASS}
-      - KC_HTTP_RELATIVE_PATH=/auth
+      - KC_HOSTNAME=${KC_HOSTNAME}
       - KC_HOSTNAME_STRICT=false
-      - KC_HOSTNAME_URL=http://${KC_HOSTNAME}:8080/auth
-      - KC_HOSTNAME_ADMIN_URL=http://${KC_HOSTNAME}:8080/auth
       - KC_HTTP_ENABLED=true
       - KC_HOSTNAME_STRICT_HTTPS=false
       - KC_PROXY=edge
