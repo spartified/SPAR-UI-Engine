@@ -43,6 +43,8 @@ services:
       - KC_HOSTNAME=${KC_HOSTNAME}
       - KC_HTTP_RELATIVE_PATH=/auth
       - KC_HOSTNAME_STRICT=false
+      - KC_HOSTNAME_URL=http://${KC_HOSTNAME}:8080/auth
+      - KC_HOSTNAME_ADMIN_URL=http://${KC_HOSTNAME}:8080/auth
       - KC_HTTP_ENABLED=true
       - KC_HOSTNAME_STRICT_HTTPS=false
       - KC_PROXY=edge
