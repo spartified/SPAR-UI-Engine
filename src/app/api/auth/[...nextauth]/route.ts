@@ -112,25 +112,33 @@ export const authOptions: NextAuthOptions = {
                                 try {
                                     const pPool = await dbManager.getPool(poolName, poolConnString);
                                     const [rows]: any = await pPool.execute(
-                                        `SELECT account_id, role_id FROM users WHERE email = ? AND status = 'ACTIVE' LIMIT 1`,
+                                        `SELECT * FROM users WHERE email = ? AND status = 'ACTIVE' LIMIT 1`,
                                         [userEmail]
                                     );
 
                                     if (rows && rows.length > 0) {
                                         productContexts[poolName] = {
                                             accountId: rows[0].account_id,
-                                            roleId: rows[0].role_id
+                                            roleId: rows[0].role_id,
+                                            role: rows[0].role
                                         };
                                         if (poolName === 'ORION' || !token.account_id) {
                                             token.account_id = rows[0].account_id;
                                         }
 
+                                        // Support legacy role_id pattern
                                         if (rows[0].role_id) {
                                             const [rRows]: any = await pPool.execute(`SELECT permissions FROM roles WHERE id = ? LIMIT 1`, [rows[0].role_id]);
                                             if (rRows?.[0]?.permissions) {
                                                 const pms = typeof rRows[0].permissions === 'string' ? JSON.parse(rRows[0].permissions) : rRows[0].permissions;
                                                 modulePermissions.push(...pms);
                                             }
+                                        }
+
+                                        // Support new direct permissions column pattern
+                                        if (rows[0].permissions) {
+                                            const pms = typeof rows[0].permissions === 'string' ? JSON.parse(rows[0].permissions) : rows[0].permissions;
+                                            modulePermissions.push(...pms);
                                         }
                                     }
                                 } catch (err) {
