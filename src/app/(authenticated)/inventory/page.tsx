@@ -105,68 +105,76 @@ export default function OrionInventoryPage() {
     }, [selectedAggregator]);
 
     const handleSync = useCallback(async (record: InventoryItem) => {
+        if (!selectedAggregator) return;
         setLoading(true);
         try {
-            // 1. Fetch SIMs for this inventory (Mock)
-            const mockSims = Array.from({ length: 5 }).map((_, i) => ({
-                iccid: `8900000000000${record.id.split('-').pop()}${i}`,
-                mapped_imsi: `2040400000000${i}`,
-                sim_status: 'active',
-                sim_type: 'eSIM'
-            }));
+            // 1. Fetch real SIMs for this inventory from aggregator
+            const simsRes = await fetch(`/api/orion/inventory/sims/fetch?inventoryId=${record.id}&aggregatorId=${selectedAggregator}`);
+            if (!simsRes.ok) {
+                const err = await simsRes.json();
+                throw new Error(err.error || "Failed to fetch SIMs for sync");
+            }
+            const simsData = await simsRes.json();
+            const realSims = Array.isArray(simsData) ? simsData : (simsData.sims || []);
 
-            // 2. Call Sync API
+            // 2. Call Sync API with real SIMs
             const res = await fetch('/api/orion/inventory/sync', {
+                // ... (rest of the same call)
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
                     inventory: record,
-                    sims: mockSims,
+                    sims: realSims,
                     aggregator_id: selectedAggregator
                 })
             });
 
             if (res.ok) {
-                message.success(`Successfully synced ${record.id} and its SIMs!`);
+                message.success(`Successfully synced ${record.id} and its ${realSims.length} SIMs!`);
                 setInventory(prev => prev.map(item => item.id === record.id ? { ...item, is_synced: true } : item));
             } else {
                 const err = await res.json();
                 message.error(err.error || "Sync failed");
             }
-        } catch (error) {
-            message.error("Sync process failed");
+        } catch (error: any) {
+            message.error(error.message || "Sync process failed");
         } finally {
             setLoading(false);
         }
     }, [selectedAggregator]);
 
     const showDetails = useCallback(async (record: InventoryItem) => {
-        if (!record) return;
+        if (!record || !selectedAggregator) return;
         message.loading({ content: 'Fetching SIM details...', key: 'sim_loading' });
         setSelectedInventory(record);
         setSimData([]); // Reset previous data
         setDetailsVisible(true);
         setDetailsLoading(true);
         try {
-            // Mocking the SIM list for the drill-down
-            const mockSims = Array.from({ length: 5 }).map((_, i) => ({
-                iccid: `8900000000000${record.id.split('-').pop()}${i}`,
-                mapped_imsi: `2040400000000${i}`,
-                sim_status: 'Active',
-                sim_type: 'eSIM',
+            // Fetch real SIMs for the drill-down
+            const simsRes = await fetch(`/api/orion/inventory/sims/fetch?inventoryId=${record.id}&aggregatorId=${selectedAggregator}`);
+            if (!simsRes.ok) {
+                const err = await simsRes.json();
+                throw new Error(err.error || "Failed to fetch SIMs");
+            }
+            const simsData = await simsRes.json();
+            const realSims = Array.isArray(simsData) ? simsData : (simsData.sims || []);
+
+            setSimData(realSims.map((sim: any) => ({
+                ...sim,
                 inventory: record.id,
                 created_date: record.created_date,
                 modified_date: record.modified_date
-            }));
-            setSimData(mockSims);
-            message.success({ content: 'Details loaded', key: 'sim_loading', duration: 1 });
-        } catch (e) {
-            message.error({ content: 'Failed to load details', key: 'sim_loading' });
+            })));
+
+            message.success({ content: `Loaded ${realSims.length} SIMs`, key: 'sim_loading', duration: 1 });
+        } catch (e: any) {
+            message.error({ content: e.message || 'Failed to load details', key: 'sim_loading' });
             setDetailsVisible(false);
         } finally {
             setDetailsLoading(false);
         }
-    }, []);
+    }, [selectedAggregator]);
 
     const columns = useMemo(() => [
         {

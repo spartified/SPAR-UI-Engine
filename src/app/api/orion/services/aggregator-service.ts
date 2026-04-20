@@ -230,6 +230,25 @@ class AggregatorService {
         console.log(`[AggregatorService] SUCCESS ${url} Response:`, JSON.stringify(result));
         return result;
     }
+
+    public async getInventorySims(aggregatorAccountId: number | string, inventoryId: string) {
+        const url = `${this.getBaseUrl()}/v1/inventory/inventories/${inventoryId}/sims`;
+        console.log(`[AggregatorService] GET ${url} (AggregatorID: ${aggregatorAccountId})`);
+        const response = await fetch(url, {
+            method: 'GET',
+            headers: this.getHeaders(aggregatorAccountId),
+            signal: AbortSignal.timeout(15_000)
+        });
+
+        if (!response.ok) {
+            const error = await response.text();
+            throw new Error(`Failed to fetch inventory SIMs: ${response.status} - ${error}`);
+        }
+
+        const result = await response.json();
+        console.log(`[AggregatorService] SUCCESS ${url} Response:`, JSON.stringify(result));
+        return result;
+    }
 }
 
 export const aggregatorService = new AggregatorService();
