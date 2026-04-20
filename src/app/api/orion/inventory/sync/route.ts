@@ -68,7 +68,7 @@ export async function POST(req: NextRequest) {
                         sim.mapped_imsi || null,
                         localBatchId,
                         (session.user as any).account_id || 1,
-                        sim.sim_status === 'active' ? 'ACTIVATED' : 'AVAILABLE'
+                        'AVAILABLE'
                     ]
                 );
             }
