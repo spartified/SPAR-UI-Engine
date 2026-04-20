@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { dbManager } from "@/core/db/manager";
-import { telnaService } from "@/core/services/telna-service";
+import { aggregatorService } from "@/core/services/aggregator-service";
 import { authenticateApiRequest } from "@/core/auth/api-auth";
 
 export async function GET(req: NextRequest) {
@@ -46,7 +46,7 @@ export async function POST(req: NextRequest) {
         // 1. Call Telna API via Service FIRST
         let remoteId: string | number;
         try {
-            const telnaResult = await telnaService.createPackageTemplate(data.aggregator_account_id, {
+            const aggregatorResult = await aggregatorService.createPackageTemplate(data.aggregator_account_id, {
                 name: data.name,
                 traffic_policy: data.traffic_policy || 1053,
                 supported_countries: data.supported_countries || [],
@@ -64,12 +64,12 @@ export async function POST(req: NextRequest) {
                 inventory: 1 // Service will auto-resolve this
             });
 
-            remoteId = telnaResult.id || telnaResult.template_id;
-        } catch (telnaError: any) {
-            console.error("Telna Sync Failed (Before DB):", telnaError);
+            remoteId = aggregatorResult.id || aggregatorResult.template_id;
+        } catch (aggErr: any) {
+            console.error("Aggregator Sync Failed (Before DB):", aggErr);
             return NextResponse.json({
                 success: false,
-                error: "Remote synchronization failed: " + telnaError.message
+                error: "Remote synchronization failed: " + aggErr.message
             }, { status: 400 });
         }
 

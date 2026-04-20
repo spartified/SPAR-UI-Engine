@@ -19,7 +19,7 @@ export interface TelnaPackageTemplate {
     inventory: number;
 }
 
-class TelnaService {
+class AggregatorService {
     private getBaseUrl() {
         return process.env.AGG_SERVICE_URL || "http://localhost:8005/portal";
     }
@@ -220,4 +220,4 @@ class TelnaService {
     }
 }
 
-export const telnaService = new TelnaService();
+export const aggregatorService = new AggregatorService();

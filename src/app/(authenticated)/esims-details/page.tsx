@@ -16,39 +16,26 @@ export default function SIMDetailsPage() {
     const [data, setData] = useState<any>(null);
 
     useEffect(() => {
-        // Mock server fetch
-        setTimeout(() => {
-            setData({
-                iccid: iccid || '8910300000059191074',
-                dateCreated: '2026-04-02 17:28:48',
-                company: '72880 (Spartified.com)',
-                inventory: '52267 (Spartified.com Inventory 1)',
-                whitelist: '12238 (Spartified.com Inventory 1-CLASSIC)',
-                simType: 'eSIM',
-                simStatus: 'Pre-Service',
-                mappedImsi: '312300051515226',
-                euicc: {
-                    state: 'RELEASED',
-                    lastOperationDate: '2026-03-06 12:39:19',
-                    activationCode: '******************************',
-                    reuseRemaining: 5,
-                    reuseEnabled: 'Yes',
-                    profileReusePolicy: 'Reuse Type: SAME_EID_MID\\nMax Count: 5',
-                    releaseDate: '2026-03-06 12:39:19',
-                    confirmationCodeReq: 'No',
-                    confirmationCodeRetries: 'N/A',
-                    eid: 'N/A'
-                },
-                services: {
-                    data: 'Enabled',
-                    sms: 'Enabled',
-                    voice: 'Enabled'
-                },
-                msisdns: [],
-                apns: ['globaldata', 'rh', 'isp', 'altanwifi', 'plus', 'internet', 'tn1', 'orange', 'orange.fr']
-            });
-            setLoading(false);
-        }, 800);
+        let isMounted = true;
+        const fetchData = async () => {
+            if (!iccid) return;
+            try {
+                const res = await fetch(`/api/orion/euicc-profile?iccid=${iccid}`);
+                if (res.ok) {
+                    const json = await res.json();
+                    if (isMounted) setData(json);
+                } else {
+                    console.error("Failed to load details");
+                }
+            } catch (e) {
+                console.error("Error fetching detail", e);
+            } finally {
+                if (isMounted) setLoading(false);
+            }
+        };
+
+        fetchData();
+        return () => { isMounted = false; };
     }, [iccid]);
 
     if (loading) {

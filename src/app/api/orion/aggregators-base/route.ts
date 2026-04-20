@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/app/api/auth/[...nextauth]/route";
 import { dbManager } from "@/core/db/manager";
-import { telnaService } from "@/core/services/telna-service";
+import { aggregatorService } from "@/core/services/aggregator-service";
 import { AuditLogger } from "@/core/utils/audit-logger";
 import schemaRaw from "@/schemas/orion-aggregators-base.json";
 
@@ -39,7 +39,7 @@ export async function GET(req: NextRequest) {
 
                 if (idToUse) {
                     console.log(`[AggregatorsBase] Fetching countries for aggregator ${idToUse}`);
-                    const countries = await telnaService.getCountries(Number(idToUse));
+                    const countries = await aggregatorService.getCountries(Number(idToUse));
                     const count = countries?.countries?.length || (Array.isArray(countries) ? countries.length : 0);
                     console.log(`[AggregatorsBase] Found ${count} countries`);
                     return NextResponse.json(countries);
