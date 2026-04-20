@@ -44,7 +44,9 @@ class AggregatorService {
             throw new Error(`Failed to fetch inventories: ${response.status}`);
         }
 
-        return await response.json();
+        const result = await response.json();
+        console.log(`[AggregatorService] SUCCESS ${url} Response:`, JSON.stringify(result));
+        return result;
     }
 
     public async getCountries(aggregatorAccountId: number) {
@@ -60,7 +62,9 @@ class AggregatorService {
             throw new Error(`Failed to fetch countries: ${response.status}`);
         }
 
-        return await response.json();
+        const result = await response.json();
+        console.log(`[AggregatorService] SUCCESS ${url} Response:`, JSON.stringify(result));
+        return result;
     }
 
     public async createPackageTemplate(aggregatorAccountId: number, data: TelnaPackageTemplate) {
@@ -222,7 +226,9 @@ class AggregatorService {
             throw new Error(`Failed to fetch eUICC profile: ${response.status} - ${error}`);
         }
 
-        return await response.json();
+        const result = await response.json();
+        console.log(`[AggregatorService] SUCCESS ${url} Response:`, JSON.stringify(result));
+        return result;
     }
 }
 
