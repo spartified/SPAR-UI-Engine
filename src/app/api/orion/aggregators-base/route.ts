@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/app/api/auth/[...nextauth]/route";
 import { dbManager } from "@/core/db/manager";
-import { aggregatorService } from "@/core/services/aggregator-service";
+import { aggregatorService } from "@/app/api/orion/services/aggregator-service";
 import { AuditLogger } from "@/core/utils/audit-logger";
 import schemaRaw from "@/schemas/orion-aggregators-base.json";
 

@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { dbManager } from "@/core/db/manager";
-import { aggregatorService } from "@/core/services/aggregator-service";
+import { aggregatorService } from "@/app/api/orion/services/aggregator-service";
 import { authenticateApiRequest } from "@/core/auth/api-auth";
 
 export async function GET(req: NextRequest) {
