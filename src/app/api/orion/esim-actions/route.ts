@@ -39,11 +39,22 @@ export async function POST(req: NextRequest) {
     const newStatus = statusMap[action];
     const userId = (session.user as any).id || 0;
     const username = (session.user as any).email || (session.user as any).name;
+    let localUserId = 0;
 
     try {
         const connectionString = (process.env as any)[`${DB_POOL}_DB_URL`];
         if (connectionString) {
             const pool = await dbManager.getPool(DB_POOL, connectionString);
+
+            // Resolve local integer user ID from email
+            try {
+                const [userRows]: any = await pool.execute('SELECT id FROM users WHERE email = ?', [username]);
+                if (userRows && userRows.length > 0) {
+                    localUserId = userRows[0].id;
+                }
+            } catch (userErr) {
+                console.error("Failed to resolve local user ID, falling back to 0:", userErr);
+            }
 
             // Update eSIM statuses or account_id
             const placeholders = esim_ids.map(() => '?').join(', ');
@@ -62,7 +73,7 @@ export async function POST(req: NextRequest) {
             const bulkValues = esim_ids.flatMap(id => [
                 id,
                 action,
-                userId,
+                localUserId,
                 JSON.stringify({ action, esim_ids }),
             ]);
             await pool.execute(bulkInsertSql, bulkValues);
@@ -95,7 +106,7 @@ export async function POST(req: NextRequest) {
                 const bulkValuesFail = esim_ids.flatMap(id => [
                     id,
                     action,
-                    userId,
+                    localUserId,
                     JSON.stringify({ action, esim_ids }),
                     JSON.stringify({ error: error.message }),
                 ]);

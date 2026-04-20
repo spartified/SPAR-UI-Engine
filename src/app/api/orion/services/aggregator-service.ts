@@ -232,7 +232,7 @@ class AggregatorService {
     }
 
     public async getInventorySims(aggregatorAccountId: number | string, inventoryId: string) {
-        const url = `${this.getBaseUrl()}/v1/inventory/inventories/${inventoryId}/sims`;
+        const url = `${this.getBaseUrl()}/v1/inventory/sim-registries?inventory=${inventoryId}`;
         console.log(`[AggregatorService] GET ${url} (AggregatorID: ${aggregatorAccountId})`);
         const response = await fetch(url, {
             method: 'GET',
