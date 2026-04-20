@@ -32,7 +32,9 @@ class AggregatorService {
     }
 
     public async getInventories(aggregatorAccountId: number) {
-        const response = await fetch(`${this.getBaseUrl()}/v1/inventory/inventories`, {
+        const url = `${this.getBaseUrl()}/v1/inventory/inventories`;
+        console.log(`[AggregatorService] GET ${url} (AggregatorID: ${aggregatorAccountId})`);
+        const response = await fetch(url, {
             method: 'GET',
             headers: this.getHeaders(aggregatorAccountId),
             signal: AbortSignal.timeout(15_000)
@@ -46,7 +48,9 @@ class AggregatorService {
     }
 
     public async getCountries(aggregatorAccountId: number) {
-        const response = await fetch(`${this.getBaseUrl()}/v1/core/countries?count=100&offset=0`, {
+        const url = `${this.getBaseUrl()}/v1/core/countries?count=100&offset=0`;
+        console.log(`[AggregatorService] GET ${url} (AggregatorID: ${aggregatorAccountId})`);
+        const response = await fetch(url, {
             method: 'GET',
             headers: this.getHeaders(aggregatorAccountId),
             signal: AbortSignal.timeout(15_000)
@@ -204,8 +208,10 @@ class AggregatorService {
     }
 
     public async getEuiccProfile(aggregatorAccountId: number | string, iccid: string) {
+        const url = `${this.getBaseUrl()}/v1/esim-rsp/euicc-profiles/${iccid}`;
+        console.log(`[AggregatorService] GET ${url} (AggregatorID: ${aggregatorAccountId})`);
         // Correct path mapping based on Swagger json provided earlier
-        const response = await fetch(`${this.getBaseUrl()}/v1/esim-rsp/euicc-profiles/${iccid}`, {
+        const response = await fetch(url, {
             method: 'GET',
             headers: this.getHeaders(aggregatorAccountId),
             signal: AbortSignal.timeout(15_000)
