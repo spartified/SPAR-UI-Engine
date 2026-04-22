@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { dbManager } from "@/core/db/manager";
-import { aggregatorService } from "@/app/api/orion/services/aggregator-service";
+import { aggregatorService } from "../services/aggregator-service";
 import { authenticateApiRequest } from "@/core/auth/api-auth";
 
 export async function GET(req: NextRequest) {
@@ -75,6 +75,15 @@ export async function POST(req: NextRequest) {
 
         // 2. ONLY IF SUCCESSFUL: Create local record
         const pool = await dbManager.getPool('ORION', process.env.ORION_DB_URL);
+
+        const formatDate = (val: any) => {
+            if (!val) return null;
+            // Handle unix timestamp (seconds or milliseconds)
+            let date = new Date(val > 10000000000 ? val : val * 1000);
+            if (isNaN(date.getTime())) return null;
+            return date.toISOString().split('T')[0];
+        };
+
         const params = [
             data.name || null,
             data.account_id || data.aggregator_account_id || null, // Fallback if necessary
@@ -86,8 +95,8 @@ export async function POST(req: NextRequest) {
             data.traffic_policy || 0,
             'IN_SYNC',
             remoteId,
-            data.earliest_available_date || null,
-            data.latest_available_date || null
+            formatDate(data.earliest_available_date),
+            formatDate(data.latest_available_date)
         ];
 
         const [result]: any = await pool.execute(

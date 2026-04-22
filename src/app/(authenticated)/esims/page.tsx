@@ -27,19 +27,65 @@ export default function DeviceLifecyclePage() {
     const [subAccounts, setSubAccounts] = useState<any[]>([]);
     const [selectedSubAccount, setSelectedSubAccount] = useState<number | null>(null);
 
+    // Activation State
+    const [activateModalVisible, setActivateModalVisible] = useState(false);
+    const [packages, setPackages] = useState<any[]>([]);
+    const [selectedPackage, setSelectedPackage] = useState<number | null>(null);
+
     React.useEffect(() => {
         // Fetch subaccounts for the allocation drop down
         fetch('/api/orion/accounts')
             .then(res => res.json())
             .then(data => {
                 if (Array.isArray(data)) {
-                    // Just store all available ones, backend will do logical boundaries if needed
-                    // In a perfect system, api/accounts returns purely what the user sees
-                    setSubAccounts(data.filter(a => a.id !== 1)); // hide root
+                    setSubAccounts(data.filter(a => a.id !== 1));
+                }
+            })
+            .catch(() => { });
+
+        // Fetch packages for activation
+        fetch('/api/orion/packages')
+            .then(res => res.json())
+            .then(data => {
+                if (Array.isArray(data)) {
+                    setPackages(data);
                 }
             })
             .catch(() => { });
     }, []);
+
+    const processActivate = async () => {
+        if (!selectedPackage) {
+            message.warning('Please select a Package');
+            return;
+        }
+
+        setBulkLoading(true);
+        try {
+            const response = await fetch('/api/orion/esim-actions', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    action: 'ACTIVATE',
+                    package_id: selectedPackage,
+                    esim_ids: selectedRows.map(r => r.id),
+                }),
+            });
+            if (response.ok) {
+                message.success(`${selectedRows.length} eSIM(s) activation command sent.`);
+                setActivateModalVisible(false);
+                setSelectedRows([]);
+                window.location.reload();
+            } else {
+                const err = await response.json();
+                message.error(err.error || `Failed to activate.`);
+            }
+        } catch (error) {
+            message.error(`Failed to activate.`);
+        } finally {
+            setBulkLoading(false);
+        }
+    };
 
     const processAllocate = async () => {
         if (!selectedSubAccount) {
@@ -80,6 +126,12 @@ export default function DeviceLifecyclePage() {
             return;
         }
 
+        if (action === 'ACTIVATE') {
+            alert('DEBUG: ACTIVATE CLICKED - Opening Modal');
+            setActivateModalVisible(true);
+            return;
+        }
+
         Modal.confirm({
             title: `Confirm ${action}`,
             content: `Are you sure you want to ${action.toLowerCase()} ${selectedRows.length} selected eSIM(s)?`,
@@ -99,7 +151,6 @@ export default function DeviceLifecyclePage() {
                     if (response.ok) {
                         message.success(`${action} action submitted for ${selectedRows.length} eSIM(s).`);
                         setSelectedRows([]);
-                        // Trigger a refresh by reloading
                         window.location.reload();
                     } else {
                         const err = await response.json();
@@ -168,6 +219,35 @@ export default function DeviceLifecyclePage() {
                 schema={esimsSchema as any}
                 onSelectionChange={(rows) => setSelectedRows(rows)}
             />
+
+            {/* Activation Modal */}
+            <Modal
+                title="Activate eSIM(s)"
+                open={activateModalVisible}
+                onOk={processActivate}
+                onCancel={() => setActivateModalVisible(false)}
+                confirmLoading={bulkLoading}
+                okText="Activate"
+                okButtonProps={{ style: { backgroundColor: '#52c41a', borderColor: '#52c41a' } }}
+            >
+                <div style={{ marginBottom: 16 }}>
+                    Select a Package Template to apply to {selectedRows.length} eSIM(s):
+                </div>
+                <Select
+                    style={{ width: '100%' }}
+                    placeholder="Choose Package"
+                    value={selectedPackage}
+                    onChange={(val) => setSelectedPackage(val)}
+                    showSearch
+                    optionFilterProp="children"
+                >
+                    {packages.map(p => (
+                        <Select.Option key={p.id} value={p.id}>
+                            {p.name} ({p.data_limit_mb}MB / {(p.duration_seconds / 86400).toFixed(0)} Days)
+                        </Select.Option>
+                    ))}
+                </Select>
+            </Modal>
 
             {/* Sub-Account Allocation Modal */}
             <Modal

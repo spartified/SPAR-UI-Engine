@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { dbManager } from "@/core/db/manager";
+import { aggregatorService } from "@/app/api/orion/services/aggregator-service";
 import { AuditLogger } from "@/core/utils/audit-logger";
 import { authenticateApiRequest } from "@/core/auth/api-auth";
 import schemaRaw from "@/schemas/orion-esims.json";
@@ -95,8 +96,59 @@ export async function PUT(req: NextRequest) {
         const connectionString = (process.env as any)[`${poolName}_DB_URL`];
         if (connectionString) {
             const pool = await dbManager.getPool(poolName, connectionString);
-            const setClause = Object.keys(data).map(key => `\`${key}\` = ?`).join(', ');
-            const setValues = Object.values(data);
+
+            // Valid columns for filtering
+            const validColumns = [
+                'mapped_imsi', 'batch_id', 'account_id', 'package_id',
+                'status', 'assigned_user_id', 'remote_id', 'sync_status'
+            ];
+
+            // 1. Detect package change for sync
+            if (data.package_id) {
+                const iccid = _identifiers.iccid;
+                const [existing]: any = await pool.execute(
+                    `SELECT package_id, aggregator_id FROM ${schema.tableName} WHERE iccid = ?`,
+                    [iccid]
+                );
+
+                if (existing.length > 0 && existing[0].package_id !== Number(data.package_id)) {
+                    console.log(`[ESIM Sync] Package change detected for ${iccid}: ${existing[0].package_id} -> ${data.package_id}`);
+
+                    // Resolve remote_id for the package
+                    const [pkg]: any = await pool.execute(
+                        'SELECT remote_id FROM package_templates WHERE id = ?',
+                        [data.package_id]
+                    );
+
+                    if (pkg.length > 0 && pkg[0].remote_id) {
+                        try {
+                            const aggregatorId = existing[0].aggregator_id;
+                            await aggregatorService.subscribePackage(aggregatorId, iccid, pkg[0].remote_id);
+                            console.log(`[ESIM Sync] Successfully synced package change to aggregator.`);
+                            // If it was AVAILABLE, mark as ACTIVATED now that a package is assigned
+                            if (data.status === 'AVAILABLE') {
+                                data.status = 'ACTIVATED';
+                            }
+                        } catch (err: any) {
+                            console.error(`[ESIM Sync] Aggregator subscription failed:`, err.message);
+                            throw new Error("Failed to sync package change with carrier: " + err.message);
+                        }
+                    }
+                }
+            }
+
+            // 2. Filter input data to only include valid columns
+            const filteredData: any = {};
+            validColumns.forEach(col => {
+                if (data[col] !== undefined) filteredData[col] = data[col];
+            });
+
+            if (Object.keys(filteredData).length === 0) {
+                return NextResponse.json({ success: true, message: "No fields to update" });
+            }
+
+            const setClause = Object.keys(filteredData).map(key => `\`${key}\` = ?`).join(', ');
+            const setValues = Object.values(filteredData);
             const whereClause = Object.keys(_identifiers).map(key => `\`${key}\` = ?`).join(' AND ');
             const whereValues = Object.values(_identifiers);
             const sql = `UPDATE ${schema.tableName} SET ${setClause} WHERE ${whereClause}`;

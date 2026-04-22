@@ -9,15 +9,15 @@ export async function GET(req: NextRequest) {
         return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const inventoryId = req.nextUrl.searchParams.get('inventoryId');
-    const aggregatorId = req.nextUrl.searchParams.get('aggregatorId');
+    const iccid = req.nextUrl.searchParams.get('inventoryId');
+    const aggregatorAccountId = req.nextUrl.searchParams.get('aggregatorId');
 
-    if (!inventoryId || !aggregatorId) {
+    if (!iccid || !aggregatorAccountId) {
         return NextResponse.json({ error: "Missing inventoryId or aggregatorId" }, { status: 400 });
     }
 
     try {
-        const sims = await aggregatorService.getInventorySims(aggregatorId, inventoryId);
+        const sims = await aggregatorService.getInventorySims(aggregatorAccountId, iccid);
         return NextResponse.json(sims);
     } catch (error: any) {
         console.error("Failed to fetch inventory SIMs:", error);

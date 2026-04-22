@@ -1,21 +1,20 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getServerSession } from "next-auth/next";
-import { authOptions } from "@/app/api/auth/[...nextauth]/route";
 import { dbManager } from "@/core/db/manager";
-import { aggregatorService } from "@/app/api/orion/services/aggregator-service";
+import { aggregatorService } from "../services/aggregator-service";
 import { AuditLogger } from "@/core/utils/audit-logger";
+import { authenticateApiRequest } from "@/core/auth/api-auth";
 import schemaRaw from "@/schemas/orion-aggregators-base.json";
 
 const schema = schemaRaw as any;
 
 export async function GET(req: NextRequest) {
-    const session = await getServerSession(authOptions);
-    const hasPerm = (session?.user as any)?.permissions?.some((p: string) =>
+    const auth = await authenticateApiRequest(req);
+    const hasPerm = auth.authorized && auth.permissions.some((p: string) =>
         ['orion:aggregator:manage', 'orion:package:manage'].includes(p)
     );
 
-    if (!session || !hasPerm) {
-        console.warn(`[AggregatorsBase] Unauthorized access attempt: ${session?.user?.email}`);
+    if (!auth.authorized || !hasPerm) {
+        console.warn(`[AggregatorsBase] Unauthorized access attempt: ${auth.userId || 'api-key'}`);
         return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
     }
 
@@ -38,10 +37,26 @@ export async function GET(req: NextRequest) {
                 }
 
                 if (idToUse) {
-                    console.log(`[AggregatorsBase] Fetching countries for aggregator ${idToUse}`);
-                    const countries = await aggregatorService.getCountries(Number(idToUse));
-                    const count = countries?.countries?.length || (Array.isArray(countries) ? countries.length : 0);
-                    console.log(`[AggregatorsBase] Found ${count} countries`);
+                    const serviceUrl = process.env.AGG_SERVICE_URL || 'http://localhost:8005/portal';
+                    const endpoint = `${serviceUrl}/v1/core/countries?offset=0&count=100`;
+
+                    console.log(`[AggregatorsBase] Redirecting country fetch for aggregator ${idToUse} to ${serviceUrl}`);
+
+                    const response = await fetch(endpoint, {
+                        headers: {
+                            'accept': 'application/json',
+                            'aggregator-id': String(idToUse)
+                        }
+                    });
+
+                    if (!response.ok) {
+                        const errorText = await response.text();
+                        console.error(`[AggregatorsBase] Aggregator Service Error: ${response.status} - ${errorText}`);
+                        throw new Error(`Aggregator service returned ${response.status}`);
+                    }
+
+                    const countries = await response.json();
+                    console.log(`[AggregatorsBase] Found ${countries?.countries?.length || 0} countries from service`);
                     return NextResponse.json(countries);
                 }
                 console.warn(`[AggregatorsBase] No aggregator found for country fetch`);
@@ -68,8 +83,8 @@ export async function GET(req: NextRequest) {
 }
 
 export async function POST(req: NextRequest) {
-    const session = await getServerSession(authOptions);
-    if (!session || !(session.user as any).permissions.includes('orion:aggregator:manage')) {
+    const auth = await authenticateApiRequest(req);
+    if (!auth.authorized || !auth.permissions.includes('orion:aggregator:manage')) {
         return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
     }
     const data = await req.json();
@@ -86,7 +101,7 @@ export async function POST(req: NextRequest) {
             await pool.execute(sql, values as any[]);
 
             await AuditLogger.log({
-                username: (session.user as any).email || (session.user as any).name,
+                username: auth.userId || 'api-key',
                 screen: schema.title,
                 action: 'Create Aggregator',
                 status: 'Success',
@@ -103,8 +118,8 @@ export async function POST(req: NextRequest) {
 }
 
 export async function PUT(req: NextRequest) {
-    const session = await getServerSession(authOptions);
-    if (!session || !(session.user as any).permissions.includes('orion:aggregator:manage')) {
+    const auth = await authenticateApiRequest(req);
+    if (!auth.authorized || !auth.permissions.includes('orion:aggregator:manage')) {
         return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
     }
 
@@ -123,7 +138,7 @@ export async function PUT(req: NextRequest) {
             await pool.execute(sql, [...setValues, ...whereValues] as any[]);
 
             await AuditLogger.log({
-                username: (session.user as any).email || (session.user as any).name,
+                username: auth.userId || 'api-key',
                 screen: schema.title,
                 action: 'Update Aggregator',
                 status: 'Success',
@@ -141,8 +156,8 @@ export async function PUT(req: NextRequest) {
 }
 
 export async function DELETE(req: NextRequest) {
-    const session = await getServerSession(authOptions);
-    if (!session || !(session.user as any).permissions.includes('orion:aggregator:manage')) {
+    const auth = await authenticateApiRequest(req);
+    if (!auth.authorized || !auth.permissions.includes('orion:aggregator:manage')) {
         return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
     }
 
@@ -159,7 +174,7 @@ export async function DELETE(req: NextRequest) {
             await pool.execute(sql, whereValues as any[]);
 
             await AuditLogger.log({
-                username: (session.user as any).email || (session.user as any).name,
+                username: auth.userId || 'api-key',
                 screen: schema.title,
                 action: 'Delete Aggregator',
                 status: 'Success',

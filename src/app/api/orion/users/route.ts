@@ -1,17 +1,16 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getServerSession } from "next-auth/next";
-import { authOptions } from "@/app/api/auth/[...nextauth]/route";
 import { dbManager } from "@/core/db/manager";
 import { AuditLogger } from "@/core/utils/audit-logger";
 import { KeycloakAdmin } from "@/core/utils/keycloak-admin";
+import { authenticateApiRequest } from "@/core/auth/api-auth";
 import schemaRaw from "@/schemas/orion-users.json";
 
 const schema = schemaRaw as any;
 
 export async function GET(req: NextRequest) {
-    const session = await getServerSession(authOptions);
-    if (!session || !(session.user as any).permissions.includes('orion:user:manage')) {
-        return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
+    const auth = await authenticateApiRequest(req);
+    if (!auth.authorized || !auth.permissions.includes('orion:user:manage')) {
+        return NextResponse.json({ error: "Unauthorized. Permission required: orion:user:manage" }, { status: 403 });
     }
 
     try {
@@ -23,9 +22,9 @@ export async function GET(req: NextRequest) {
             const orionPool = await dbManager.getPool(poolName, connectionString);
             const corePool = await dbManager.getPool('CORE', coreConnectionString);
 
-            const userAccountId = (session?.user as any)?.productContexts?.ORION?.accountId || (session?.user as any)?.account_id;
+            const userAccountId = auth.accountId;
             let whereClause = "";
-            if (userAccountId) {
+            if (userAccountId && !auth.permissions.includes('admin')) {
                 const { getAccountHierarchy } = await import("@/core/utils/hierarchy");
                 const hierarchy = await getAccountHierarchy(userAccountId);
                 if (hierarchy.length > 0) {
@@ -40,19 +39,18 @@ export async function GET(req: NextRequest) {
 
             if (emails.length > 0) {
                 const placeholders = emails.map(() => '?').join(',');
-                const [pRows]: any = await corePool.execute(`SELECT email, role, permissions FROM users WHERE email IN (${placeholders})`, emails);
+                const [pRows]: any = await corePool.execute(`SELECT email, role FROM users WHERE email IN (${placeholders})`, emails);
                 pRows.forEach((r: any) => {
                     platformData[r.email] = {
-                        role: r.role,
-                        permissions: r.permissions ? (typeof r.permissions === 'string' ? JSON.parse(r.permissions) : r.permissions) : []
+                        role: r.role
                     };
                 });
             }
 
             const enrichedUsers = orionUsers.map((u: any) => ({
                 ...u,
-                role: platformData[u.email]?.role || 'viewer',
-                permissions: platformData[u.email]?.permissions || []
+                role: platformData[u.email]?.role || u.role || 'viewer',
+                permissions: u.permissions ? (typeof u.permissions === 'string' ? JSON.parse(u.permissions) : u.permissions) : []
             }));
 
             return NextResponse.json(enrichedUsers);
@@ -65,9 +63,9 @@ export async function GET(req: NextRequest) {
 }
 
 export async function POST(req: NextRequest) {
-    const session = await getServerSession(authOptions);
-    if (!session || !(session.user as any).permissions.includes('orion:user:manage')) {
-        return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
+    const auth = await authenticateApiRequest(req);
+    if (!auth.authorized || !auth.permissions.includes('orion:user:manage')) {
+        return NextResponse.json({ error: "Unauthorized. Permission required: orion:user:manage" }, { status: 403 });
     }
 
     const data = await req.json();
@@ -75,8 +73,8 @@ export async function POST(req: NextRequest) {
         return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
     }
 
-    const userAccountId = (session?.user as any)?.productContexts?.ORION?.accountId || (session?.user as any)?.account_id;
-    if (userAccountId) {
+    const userAccountId = auth.accountId;
+    if (userAccountId && !auth.permissions.includes('admin')) {
         const { getAccountHierarchy } = await import("@/core/utils/hierarchy");
         const hierarchy = await getAccountHierarchy(userAccountId);
         if (!hierarchy.includes(Number(data.account_id))) {
@@ -107,11 +105,14 @@ export async function POST(req: NextRequest) {
             const corePool = await dbManager.getPool('CORE', coreConnectionString);
 
             await corePool.execute(
-                "INSERT INTO users (id, username, name, email, role, permissions) VALUES (?, ?, ?, ?, ?, ?) ON DUPLICATE KEY UPDATE updated_at = CURRENT_TIMESTAMP, role = VALUES(role), permissions = VALUES(permissions)",
-                [keycloakId, data.email, `${data.first_name} ${data.last_name || ''}`.trim(), data.email, data.role || 'viewer', JSON.stringify(data.permissions || [])]
+                "INSERT INTO users (id, username, name, email, role) VALUES (?, ?, ?, ?, ?) ON DUPLICATE KEY UPDATE updated_at = CURRENT_TIMESTAMP, role = VALUES(role)",
+                [keycloakId, data.email, `${data.first_name} ${data.last_name || ''}`.trim(), data.email, data.role || 'viewer']
             );
 
-            const { role, permissions, ...orionData } = data;
+            const orionData = { ...data };
+            orionData.permissions = JSON.stringify(data.permissions || []);
+            if (!orionData.role) orionData.role = 'viewer';
+
             const keys = Object.keys(orionData);
             const values = Object.values(orionData);
             const placeholders = keys.map(() => '?').join(', ');
@@ -119,7 +120,7 @@ export async function POST(req: NextRequest) {
             await orionPool.execute(sql, values as any[]);
 
             await AuditLogger.log({
-                username: (session.user as any).email || (session.user as any).name,
+                username: auth.userId || 'api-key',
                 screen: schema.title,
                 action: 'Data Insert',
                 status: 'Success',
@@ -136,9 +137,9 @@ export async function POST(req: NextRequest) {
 }
 
 export async function PUT(req: NextRequest) {
-    const session = await getServerSession(authOptions);
-    if (!session || !(session.user as any).permissions.includes('orion:user:manage')) {
-        return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
+    const auth = await authenticateApiRequest(req);
+    if (!auth.authorized || !auth.permissions.includes('orion:user:manage')) {
+        return NextResponse.json({ error: "Unauthorized. Permission required: orion:user:manage" }, { status: 403 });
     }
 
     try {
@@ -146,8 +147,8 @@ export async function PUT(req: NextRequest) {
         const { _identifiers, role, permissions, ...data } = body;
         const email = _identifiers.email || data.email;
 
-        const userAccountId = (session?.user as any)?.productContexts?.ORION?.accountId || (session?.user as any)?.account_id;
-        if (userAccountId && data.account_id) {
+        const userAccountId = auth.accountId;
+        if (userAccountId && data.account_id && !auth.permissions.includes('admin')) {
             const { getAccountHierarchy } = await import("@/core/utils/hierarchy");
             const hierarchy = await getAccountHierarchy(userAccountId);
             if (!hierarchy.includes(Number(data.account_id))) {
@@ -163,10 +164,9 @@ export async function PUT(req: NextRequest) {
             const orionPool = await dbManager.getPool(poolName, connectionString);
             const corePool = await dbManager.getPool('CORE', coreConnectionString);
 
-            if (role || permissions || data.first_name || data.last_name) {
+            if (role || data.first_name || data.last_name) {
                 const updateFields: any = {};
                 if (role) updateFields.role = role;
-                if (permissions) updateFields.permissions = JSON.stringify(permissions);
                 if (data.first_name || data.last_name) {
                     updateFields.name = `${data.first_name || ''} ${data.last_name || ''}`.trim();
                 }
@@ -177,15 +177,19 @@ export async function PUT(req: NextRequest) {
                 }
             }
 
-            const setClause = Object.keys(data).map(key => `\`${key}\` = ?`).join(', ');
-            const setValues = Object.values(data);
+            const orionData = { ...data };
+            if (role) orionData.role = role;
+            if (permissions) orionData.permissions = JSON.stringify(permissions);
+
+            const setClause = Object.keys(orionData).map(key => `\`${key}\` = ?`).join(', ');
+            const setValues = Object.values(orionData);
             const whereClause = Object.keys(_identifiers).map(key => `\`${key}\` = ?`).join(' AND ');
             const whereValues = Object.values(_identifiers);
             const sql = `UPDATE users SET ${setClause} WHERE ${whereClause}`;
             await orionPool.execute(sql, [...setValues, ...whereValues] as any[]);
 
             await AuditLogger.log({
-                username: (session.user as any).email || (session.user as any).name,
+                username: auth.userId || 'api-key',
                 screen: schema.title,
                 action: 'Data Update',
                 status: 'Success',
@@ -202,9 +206,9 @@ export async function PUT(req: NextRequest) {
 }
 
 export async function DELETE(req: NextRequest) {
-    const session = await getServerSession(authOptions);
-    if (!session || !(session.user as any).permissions.includes('orion:user:manage')) {
-        return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
+    const auth = await authenticateApiRequest(req);
+    if (!auth.authorized || !auth.permissions.includes('orion:user:manage')) {
+        return NextResponse.json({ error: "Unauthorized. Permission required: orion:user:manage" }, { status: 403 });
     }
 
     try {
@@ -239,7 +243,7 @@ export async function DELETE(req: NextRequest) {
             await orionPool.execute(sql, whereValues as any[]);
 
             await AuditLogger.log({
-                username: (session.user as any).email || (session.user as any).name,
+                username: auth.userId || 'api-key',
                 screen: schema.title,
                 action: 'Data Delete',
                 status: 'Success',

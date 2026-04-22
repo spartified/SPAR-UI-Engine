@@ -1,18 +1,18 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getServerSession } from "next-auth/next";
-import { authOptions } from "@/app/api/auth/[...nextauth]/route";
 import { dbManager } from "@/core/db/manager";
+import { aggregatorService } from "@/app/api/orion/services/aggregator-service";
 import { AuditLogger } from "@/core/utils/audit-logger";
+import { authenticateApiRequest } from "@/core/auth/api-auth";
 
 const DB_POOL = "ORION";
 
 export async function POST(req: NextRequest) {
-    const session = await getServerSession(authOptions);
-    if (!session || !(session.user as any).permissions.includes('orion:esim:manage')) {
-        return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
+    const auth = await authenticateApiRequest(req);
+    if (!auth.authorized || !auth.permissions.includes('orion:esim:manage')) {
+        return NextResponse.json({ error: "Unauthorized. Permission required: orion:esim:manage" }, { status: 403 });
     }
 
-    const { action, esim_ids, account_id } = await req.json();
+    const { action, esim_ids, account_id, package_id } = await req.json();
 
     // Validate action
     const validActions = ['ACTIVATE', 'DEACTIVATE', 'SUSPEND', 'RESUME', 'ALLOCATE_SUBACCOUNT'];
@@ -37,8 +37,7 @@ export async function POST(req: NextRequest) {
     };
 
     const newStatus = statusMap[action];
-    const userId = (session.user as any).id || 0;
-    const username = (session.user as any).email || (session.user as any).name;
+    const username = auth.userId || 'api-key';
     let localUserId = 0;
 
     try {
@@ -46,7 +45,7 @@ export async function POST(req: NextRequest) {
         if (connectionString) {
             const pool = await dbManager.getPool(DB_POOL, connectionString);
 
-            // Resolve local integer user ID from email
+            // Resolve local integer user ID from email/username
             try {
                 const [userRows]: any = await pool.execute('SELECT id FROM users WHERE email = ?', [username]);
                 if (userRows && userRows.length > 0) {
@@ -62,6 +61,35 @@ export async function POST(req: NextRequest) {
             if (action === 'ALLOCATE_SUBACCOUNT') {
                 const updateSql = `UPDATE esims SET account_id = ?, updated_at = NOW() WHERE id IN (${placeholders})`;
                 await pool.execute(updateSql, [account_id, ...esim_ids]);
+            } else if (action === 'ACTIVATE') {
+                if (!package_id) {
+                    throw new Error("package_id is required for activation");
+                }
+
+                // Resolve Remote Package Template ID
+                const [pkgRows]: any = await pool.execute('SELECT remote_id FROM package_templates WHERE id = ?', [package_id]);
+                if (pkgRows.length === 0 || !pkgRows[0].remote_id) {
+                    throw new Error("Selected package has no valid remote template ID");
+                }
+                const remotePackageId = pkgRows[0].remote_id;
+
+                // Sync each SIM with Aggregator
+                const [simRows]: any = await pool.execute(`SELECT id, iccid, aggregator_id FROM esims WHERE id IN (${placeholders})`, esim_ids);
+
+                for (const sim of simRows) {
+                    console.log(`[ESIM Activation] Activating ICCID ${sim.iccid} with Package ${remotePackageId}`);
+                    try {
+                        await aggregatorService.subscribePackage(sim.aggregator_id, sim.iccid, remotePackageId);
+                        // Update local eSIM status and assign package
+                        await pool.execute(
+                            'UPDATE esims SET status = ?, package_id = ?, updated_at = NOW() WHERE id = ?',
+                            ['ACTIVATED', package_id, sim.id]
+                        );
+                    } catch (err: any) {
+                        console.error(`[ESIM Activation] Failed for ${sim.iccid}:`, err.message);
+                        throw new Error(`Activation failed for ${sim.iccid}: ${err.message}`);
+                    }
+                }
             } else {
                 const updateSql = `UPDATE esims SET status = ?, updated_at = NOW() WHERE id IN (${placeholders})`;
                 await pool.execute(updateSql, [newStatus, ...esim_ids]);
@@ -130,9 +158,9 @@ export async function POST(req: NextRequest) {
 
 // GET: Retrieve lifecycle action history
 export async function GET(req: NextRequest) {
-    const session = await getServerSession(authOptions);
-    if (!session || !(session.user as any).permissions.includes('orion:esim:manage')) {
-        return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
+    const auth = await authenticateApiRequest(req);
+    if (!auth.authorized || !auth.permissions.includes('orion:esim:manage')) {
+        return NextResponse.json({ error: "Unauthorized. Permission required: orion:esim:manage" }, { status: 403 });
     }
 
     try {
