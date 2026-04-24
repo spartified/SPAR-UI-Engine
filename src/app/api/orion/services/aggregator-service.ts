@@ -37,7 +37,7 @@ class AggregatorService {
         const response = await fetch(url, {
             method: 'GET',
             headers: this.getHeaders(aggregatorAccountId),
-            signal: AbortSignal.timeout(15_000)
+            signal: AbortSignal.timeout(30_000)
         });
 
         if (!response.ok) {
@@ -55,7 +55,7 @@ class AggregatorService {
         const response = await fetch(url, {
             method: 'GET',
             headers: this.getHeaders(aggregatorAccountId),
-            signal: AbortSignal.timeout(15_000)
+            signal: AbortSignal.timeout(30_000)
         });
 
         if (!response.ok) {
@@ -126,7 +126,7 @@ class AggregatorService {
                 'Reference-ID': requestId
             },
             body: JSON.stringify(data),
-            signal: AbortSignal.timeout(15_000)
+            signal: AbortSignal.timeout(30_000)
         });
 
         if (!response.ok) {
@@ -144,7 +144,7 @@ class AggregatorService {
         const response = await fetch(`${this.getBaseUrl()}/v1/pcr/package-templates/${remoteId}`, {
             method: 'GET',
             headers: this.getHeaders(aggregatorAccountId),
-            signal: AbortSignal.timeout(15_000)
+            signal: AbortSignal.timeout(30_000)
         });
 
         if (!response.ok) return null;
@@ -155,7 +155,7 @@ class AggregatorService {
         const response = await fetch(`${this.getBaseUrl()}/v1/pcr/package-templates/${remoteId}`, {
             method: 'DELETE',
             headers: this.getHeaders(aggregatorAccountId),
-            signal: AbortSignal.timeout(15_000)
+            signal: AbortSignal.timeout(30_000)
         });
 
         if (!response.ok) {
@@ -184,7 +184,7 @@ class AggregatorService {
                 'Reference-ID': requestId
             },
             body: JSON.stringify(data),
-            signal: AbortSignal.timeout(15_000)
+            signal: AbortSignal.timeout(30_000)
         });
 
         if (!response.ok) {
@@ -200,7 +200,7 @@ class AggregatorService {
         const response = await fetch(`${this.getBaseUrl()}/v1/pcr/packages/${remotePackageId}`, {
             method: 'DELETE',
             headers: this.getHeaders(aggregatorAccountId),
-            signal: AbortSignal.timeout(15_000)
+            signal: AbortSignal.timeout(30_000)
         });
 
         if (!response.ok) {
@@ -218,7 +218,7 @@ class AggregatorService {
         const response = await fetch(url, {
             method: 'GET',
             headers: this.getHeaders(aggregatorAccountId),
-            signal: AbortSignal.timeout(15_000)
+            signal: AbortSignal.timeout(30_000)
         });
 
         if (!response.ok) {
@@ -237,7 +237,7 @@ class AggregatorService {
         const response = await fetch(url, {
             method: 'GET',
             headers: this.getHeaders(aggregatorAccountId),
-            signal: AbortSignal.timeout(15_000)
+            signal: AbortSignal.timeout(30_000)
         });
 
         if (!response.ok) {

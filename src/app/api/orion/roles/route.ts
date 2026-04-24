@@ -1,8 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getServerSession } from "next-auth/next";
-import { authOptions } from "@/app/api/auth/[...nextauth]/route";
 import { dbManager } from "@/core/db/manager";
 import { AuditLogger } from "@/core/utils/audit-logger";
+import { authenticateApiRequest } from "@/core/auth/api-auth";
 import schemaRaw from "@/schemas/orion-roles.json";
 
 const schema = schemaRaw as any;
@@ -15,8 +14,8 @@ let mockRoles = [
 ];
 
 export async function GET(req: NextRequest) {
-    const session = await getServerSession(authOptions);
-    if (!session || !(session.user as any).permissions.includes('orion:role:manage')) {
+    const auth = await authenticateApiRequest(req);
+    if (!auth.authorized || !auth.permissions.includes('orion:role:manage')) {
         return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
     }
 
@@ -39,8 +38,8 @@ export async function GET(req: NextRequest) {
 }
 
 export async function POST(req: NextRequest) {
-    const session = await getServerSession(authOptions);
-    if (!session || !(session.user as any).permissions.includes('orion:role:manage')) {
+    const auth = await authenticateApiRequest(req);
+    if (!auth.authorized || !auth.permissions.includes('orion:role:manage')) {
         return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
     }
 
@@ -61,7 +60,7 @@ export async function POST(req: NextRequest) {
             await pool.execute(sql, values as any[]);
 
             await AuditLogger.log({
-                username: (session.user as any).email || (session.user as any).name,
+                username: auth.userId || 'api-key',
                 screen: schema.title,
                 action: 'Data Insert',
                 status: 'Success',
@@ -81,8 +80,8 @@ export async function POST(req: NextRequest) {
 }
 
 export async function PUT(req: NextRequest) {
-    const session = await getServerSession(authOptions);
-    if (!session || !(session.user as any).permissions.includes('orion:role:manage')) {
+    const auth = await authenticateApiRequest(req);
+    if (!auth.authorized || !auth.permissions.includes('orion:role:manage')) {
         return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
     }
 
@@ -101,7 +100,7 @@ export async function PUT(req: NextRequest) {
             await pool.execute(sql, [...setValues, ...whereValues] as any[]);
 
             await AuditLogger.log({
-                username: (session.user as any).email || (session.user as any).name,
+                username: auth.userId || 'api-key',
                 screen: schema.title,
                 action: 'Data Update',
                 status: 'Success',
@@ -119,8 +118,8 @@ export async function PUT(req: NextRequest) {
 }
 
 export async function DELETE(req: NextRequest) {
-    const session = await getServerSession(authOptions);
-    if (!session || !(session.user as any).permissions.includes('orion:role:manage')) {
+    const auth = await authenticateApiRequest(req);
+    if (!auth.authorized || !auth.permissions.includes('orion:role:manage')) {
         return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
     }
 
@@ -137,7 +136,7 @@ export async function DELETE(req: NextRequest) {
             await pool.execute(sql, whereValues as any[]);
 
             await AuditLogger.log({
-                username: (session.user as any).email || (session.user as any).name,
+                username: auth.userId || 'api-key',
                 screen: schema.title,
                 action: 'Data Delete',
                 status: 'Success',

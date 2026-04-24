@@ -1,13 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getServerSession } from "next-auth/next";
-import { authOptions } from "@/app/api/auth/[...nextauth]/route";
 import { dbManager } from "@/core/db/manager";
 import { aggregatorService } from "../../services/aggregator-service";
+import { authenticateApiRequest } from "@/core/auth/api-auth";
 
 export async function GET(req: NextRequest) {
-    const session = await getServerSession(authOptions);
-    if (!session) {
-        return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    const auth = await authenticateApiRequest(req);
+    if (!auth.authorized) {
+        return NextResponse.json({ error: auth.error || "Unauthorized" }, { status: 401 });
     }
 
     const aggregatorId = req.nextUrl.searchParams.get('aggregatorId');

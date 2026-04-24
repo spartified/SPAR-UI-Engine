@@ -1,12 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getServerSession } from "next-auth/next";
-import { authOptions } from "@/app/api/auth/[...nextauth]/route";
 import { dbManager } from "@/core/db/manager";
 import { AuditLogger } from "@/core/utils/audit-logger";
+import { authenticateApiRequest } from "@/core/auth/api-auth";
 
 export async function POST(req: NextRequest) {
-    const session = await getServerSession(authOptions);
-    if (!session || (session.user as any).role !== 'admin') {
+    const auth = await authenticateApiRequest(req);
+    if (!auth.authorized || !auth.permissions.includes('admin')) {
         return NextResponse.json({ error: "Unauthorized. Root access required." }, { status: 403 });
     }
 
@@ -30,7 +29,7 @@ export async function POST(req: NextRequest) {
         await pool.execute(query, [account_id, ...iccid_list]);
 
         await AuditLogger.log({
-            username: (session.user as any).email || (session.user as any).name,
+            username: auth.userId || 'api-key',
             screen: 'Inventory Management',
             action: 'Bulk Allocate ICCIDs',
             status: 'Success',

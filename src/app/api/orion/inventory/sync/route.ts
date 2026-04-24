@@ -1,12 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getServerSession } from "next-auth/next";
-import { authOptions } from "@/app/api/auth/[...nextauth]/route";
 import { dbManager } from "@/core/db/manager";
+import { authenticateApiRequest } from "@/core/auth/api-auth";
 
 export async function POST(req: NextRequest) {
-    const session = await getServerSession(authOptions);
-    if (!session) {
-        return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    const auth = await authenticateApiRequest(req);
+    if (!auth.authorized) {
+        return NextResponse.json({ error: auth.error || "Unauthorized" }, { status: 401 });
     }
 
     const { inventory, sims, aggregator_id } = await req.json();
@@ -43,7 +42,7 @@ export async function POST(req: NextRequest) {
                     'INSERT INTO inventory_batches (inventory_id, account_id, status, aggregator, total_count, available_count) VALUES (?, ?, ?, ?, ?, ?)',
                     [
                         inventory.id.toString(),
-                        (session.user as any).account_id || 1,
+                        auth.accountId || 1,
                         inventory.status === 'Active' ? 'AVAILABLE' : 'FULLY_ALLOCATED',
                         inventory.aggregator_name || 'Telna',
                         sims.length,
@@ -67,7 +66,7 @@ export async function POST(req: NextRequest) {
                         sim.iccid,
                         sim.mapped_imsi || null,
                         localBatchId,
-                        (session.user as any).account_id || 1,
+                        auth.accountId || 1,
                         'AVAILABLE'
                     ]
                 );

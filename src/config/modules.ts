@@ -135,15 +135,6 @@ export const MODULE_REGISTRY: ModuleDefinition[] = [
         permission: 'orion:package:manage',
         dbPool: 'ORION'
     },
-    {
-        id: 'api-keys',
-        title: 'Developer API Key',
-        path: '/admin/api-keys',
-        category: 'Administration',
-        permission: 'api-key:manage',
-        schema: '/schemas/api-keys.json',
-        dbPool: 'CORE'
-    },
     // PRODUCT_MODULES_END
 ];
 
@@ -154,7 +145,6 @@ export const CATEGORIES = [
     // ----------------------------------------------------------------
     { id: 'Reports', title: 'Reports', icon: React.createElement(BarChartOutlined) },
     { id: 'User Management', title: 'User Management', icon: React.createElement(TeamOutlined) },
-    { id: 'Administration', title: 'Administration', icon: React.createElement(HistoryOutlined) },
     { id: 'Audit Trail', title: 'Audit Trail', icon: React.createElement(HistoryOutlined) },
     { id: 'Monitoring', title: 'Monitoring', icon: React.createElement(GlobalOutlined) },
     // PRODUCT_CATEGORIES_START — do not remove this comment, used by deploy scripts

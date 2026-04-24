@@ -42,11 +42,11 @@ services:
       - "8080:8080"
     environment:
       - KC_DB=mysql
-      - KC_DB_URL=jdbc:mysql://host.docker.internal:3306/keycloak
+      - KC_DB_URL=jdbc:mysql://172.17.0.1:3306/keycloak
       - KC_DB_USERNAME=frauddb
       - KC_DB_PASSWORD=Fraud@123
       # Forces Keycloak to use this as the base for redirects
-      - KC_HOSTNAME=192.168.29.137
+      - KC_HOSTNAME=localhost
       - KC_HOSTNAME_STRICT=false
       - KC_HTTP_ENABLED=true
       # Useful if you are accessing via a tunnel or specific port

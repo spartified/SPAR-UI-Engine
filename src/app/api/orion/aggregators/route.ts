@@ -1,19 +1,18 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getServerSession } from "next-auth/next";
-import { authOptions } from "@/app/api/auth/[...nextauth]/route";
 import { dbManager } from "@/core/db/manager";
 import { AuditLogger } from "@/core/utils/audit-logger";
+import { authenticateApiRequest } from "@/core/auth/api-auth";
 import schemaRaw from "@/schemas/orion-aggregators.json";
 import crypto from "crypto";
 
 const schema = schemaRaw as any;
 
 export async function GET(req: NextRequest) {
-    const session = await getServerSession(authOptions);
-    if (!session || !(session.user as any).permissions.includes('orion:aggregator:manage')) {
+    const auth = await authenticateApiRequest(req);
+    if (!auth.authorized || !auth.permissions.includes('orion:aggregator:manage')) {
         return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
     }
-    if ((session.user as any).account_id !== 1 && (session.user as any).role !== 'admin') {
+    if (auth.accountId !== 1 && !auth.permissions.includes('admin')) {
         return NextResponse.json({ error: "Unauthorized. Root access only." }, { status: 403 });
     }
 
@@ -35,11 +34,11 @@ export async function GET(req: NextRequest) {
 }
 
 export async function POST(req: NextRequest) {
-    const session = await getServerSession(authOptions);
-    if (!session || !(session.user as any).permissions.includes('orion:aggregator:manage')) {
+    const auth = await authenticateApiRequest(req);
+    if (!auth.authorized || !auth.permissions.includes('orion:aggregator:manage')) {
         return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
     }
-    if ((session.user as any).account_id !== 1 && (session.user as any).role !== 'admin') {
+    if (auth.accountId !== 1 && !auth.permissions.includes('admin')) {
         return NextResponse.json({ error: "Unauthorized. Root access only." }, { status: 403 });
     }
 
@@ -66,7 +65,7 @@ export async function POST(req: NextRequest) {
             await pool.execute(sql, values as any[]);
 
             await AuditLogger.log({
-                username: (session.user as any).email || (session.user as any).name,
+                username: auth.userId || 'api-key',
                 screen: schema.title,
                 action: 'Create Aggregator',
                 status: 'Success',
@@ -84,11 +83,11 @@ export async function POST(req: NextRequest) {
 }
 
 export async function PUT(req: NextRequest) {
-    const session = await getServerSession(authOptions);
-    if (!session || !(session.user as any).permissions.includes('orion:aggregator:manage')) {
+    const auth = await authenticateApiRequest(req);
+    if (!auth.authorized || !auth.permissions.includes('orion:aggregator:manage')) {
         return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
     }
-    if ((session.user as any).account_id !== 1 && (session.user as any).role !== 'admin') {
+    if (auth.accountId !== 1 && !auth.permissions.includes('admin')) {
         return NextResponse.json({ error: "Unauthorized. Root access only." }, { status: 403 });
     }
 
@@ -114,7 +113,7 @@ export async function PUT(req: NextRequest) {
             await pool.execute(sql, [...setValues, ...whereValues] as any[]);
 
             await AuditLogger.log({
-                username: (session.user as any).email || (session.user as any).name,
+                username: auth.userId || 'api-key',
                 screen: schema.title,
                 action: 'Update Aggregator',
                 status: 'Success',
@@ -132,11 +131,11 @@ export async function PUT(req: NextRequest) {
 }
 
 export async function DELETE(req: NextRequest) {
-    const session = await getServerSession(authOptions);
-    if (!session || !(session.user as any).permissions.includes('orion:aggregator:manage')) {
+    const auth = await authenticateApiRequest(req);
+    if (!auth.authorized || !auth.permissions.includes('orion:aggregator:manage')) {
         return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
     }
-    if ((session.user as any).account_id !== 1 && (session.user as any).role !== 'admin') {
+    if (auth.accountId !== 1 && !auth.permissions.includes('admin')) {
         return NextResponse.json({ error: "Unauthorized. Root access only." }, { status: 403 });
     }
 
@@ -153,7 +152,7 @@ export async function DELETE(req: NextRequest) {
             await pool.execute(sql, whereValues as any[]);
 
             await AuditLogger.log({
-                username: (session.user as any).email || (session.user as any).name,
+                username: auth.userId || 'api-key',
                 screen: schema.title,
                 action: 'Delete Aggregator',
                 status: 'Success',
