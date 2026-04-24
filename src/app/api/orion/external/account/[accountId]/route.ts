@@ -102,7 +102,7 @@ export async function PATCH(req: NextRequest, { params }: { params: { accountId:
             const setClause = Object.keys(filteredData).map(key => `\`${key}\` = ?`).join(', ');
             const setValues = Object.values(filteredData);
             const sql = `UPDATE ${schema.tableName} SET ${setClause}, updated_at = NOW() WHERE id = ?`;
-            await pool.execute(sql, [...setValues, accountId]);
+            await pool.execute(sql, [...setValues, accountId] as any[]);
 
             await AuditLogger.log({
                 username: auth.userId || 'external-api',

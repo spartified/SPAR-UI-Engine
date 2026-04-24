@@ -26,7 +26,7 @@ export async function POST(req: NextRequest) {
         const placeholders = iccid_list.map(() => '?').join(',');
         const query = `UPDATE esims SET account_id = ?, status = 'WARM' WHERE iccid IN (${placeholders})`;
 
-        await pool.execute(query, [account_id, ...iccid_list]);
+        await pool.execute(query, [account_id, ...iccid_list] as any[]);
 
         await AuditLogger.log({
             username: auth.userId || 'api-key',

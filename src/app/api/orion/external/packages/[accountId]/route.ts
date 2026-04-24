@@ -32,8 +32,8 @@ export async function GET(req: NextRequest, { params }: { params: { accountId: s
             // Typically package_templates are root level or linked to aggregator.
             // But we filter by account_id in the template if relevant.
             const [rows]: any = await pool.execute(
-                `SELECT * FROM package_templates WHERE aggregator_account_id = ? OR 1=1`, // Simplified for now, in Orion packages are often shared or filtered by aggregator
-                [accountId]
+                `SELECT * FROM package_templates WHERE aggregator_account_id = ? OR 1=1`,
+                [accountId] as any[]
             );
 
             // Refined check: only return if account is valid. 

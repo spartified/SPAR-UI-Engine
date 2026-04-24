@@ -33,7 +33,8 @@ export async function GET(req: NextRequest, { params }: { params: { accountId: s
 
             // Fetch SIMs for the entire target hierarchy
             const [rows]: any = await pool.execute(
-                `SELECT * FROM ${schema.tableName} WHERE account_id IN (${targetHierarchy.join(',')})`
+                `SELECT * FROM ${schema.tableName} WHERE account_id IN (${targetHierarchy.join(',')})`,
+                [] as any[]
             );
 
             return NextResponse.json(rows);
