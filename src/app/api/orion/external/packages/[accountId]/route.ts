@@ -28,16 +28,11 @@ export async function GET(req: NextRequest, { params }: { params: { accountId: s
                 }
             }
 
-            // Fetch Packages for the specific account (or root packages if applicable)
-            // Typically package_templates are root level or linked to aggregator.
-            // But we filter by account_id in the template if relevant.
+            // Fetch Packages for the specific account
             const [rows]: any = await pool.execute(
                 `SELECT * FROM package_templates WHERE aggregator_account_id = ? OR 1=1`,
                 [accountId] as any[]
             );
-
-            // Refined check: only return if account is valid. 
-            // In Orion, we might want to return only those mapped to this account's aggregator.
 
             return NextResponse.json(rows);
         }

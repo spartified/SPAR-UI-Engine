@@ -1,15 +1,16 @@
 import { NextRequest, NextResponse } from "next/server";
+import { getServerSession } from "next-auth/next";
+import { authOptions } from "@/app/api/auth/[...nextauth]/route";
 import { dbManager } from "@/core/db/manager";
 import { aggregatorService } from "@/app/api/orion/services/aggregator-service";
 import { AuditLogger } from "@/core/utils/audit-logger";
-import { authenticateApiRequest } from "@/core/auth/api-auth";
 
 const DB_POOL = "ORION";
 
 export async function POST(req: NextRequest) {
-    const auth = await authenticateApiRequest(req);
-    if (!auth.authorized || !auth.permissions.includes('orion:esim:manage')) {
-        return NextResponse.json({ error: "Unauthorized. Permission required: orion:esim:manage" }, { status: 403 });
+    const session = await getServerSession(authOptions);
+    if (!session || !(session.user as any).permissions.includes('orion:esim:manage')) {
+        return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
     }
 
     const { action, esim_ids, account_id, package_id } = await req.json();
@@ -37,7 +38,8 @@ export async function POST(req: NextRequest) {
     };
 
     const newStatus = statusMap[action];
-    const username = auth.userId || 'api-key';
+    const userId = (session.user as any).id || 0;
+    const username = (session.user as any).email || (session.user as any).name;
     let localUserId = 0;
 
     try {
@@ -45,7 +47,7 @@ export async function POST(req: NextRequest) {
         if (connectionString) {
             const pool = await dbManager.getPool(DB_POOL, connectionString);
 
-            // Resolve local integer user ID from email/username
+            // Resolve local integer user ID from email
             try {
                 const [userRows]: any = await pool.execute('SELECT id FROM users WHERE email = ?', [username]);
                 if (userRows && userRows.length > 0) {
@@ -158,9 +160,9 @@ export async function POST(req: NextRequest) {
 
 // GET: Retrieve lifecycle action history
 export async function GET(req: NextRequest) {
-    const auth = await authenticateApiRequest(req);
-    if (!auth.authorized || !auth.permissions.includes('orion:esim:manage')) {
-        return NextResponse.json({ error: "Unauthorized. Permission required: orion:esim:manage" }, { status: 403 });
+    const session = await getServerSession(authOptions);
+    if (!session || !(session.user as any).permissions.includes('orion:esim:manage')) {
+        return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
     }
 
     try {

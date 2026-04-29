@@ -1,16 +1,17 @@
 import { NextRequest, NextResponse } from "next/server";
+import { getServerSession } from "next-auth/next";
+import { authOptions } from "@/app/api/auth/[...nextauth]/route";
 import { dbManager } from "@/core/db/manager";
 import { AuditLogger } from "@/core/utils/audit-logger";
 import { KeycloakAdmin } from "@/core/utils/keycloak-admin";
-import { authenticateApiRequest } from "@/core/auth/api-auth";
 import schemaRaw from "@/schemas/orion-users.json";
 
 const schema = schemaRaw as any;
 
 export async function GET(req: NextRequest) {
-    const auth = await authenticateApiRequest(req);
-    if (!auth.authorized || !auth.permissions.includes('orion:user:manage')) {
-        return NextResponse.json({ error: "Unauthorized. Permission required: orion:user:manage" }, { status: 403 });
+    const session = await getServerSession(authOptions);
+    if (!session || !(session.user as any).permissions.includes('orion:user:manage')) {
+        return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
     }
 
     try {
@@ -22,9 +23,9 @@ export async function GET(req: NextRequest) {
             const orionPool = await dbManager.getPool(poolName, connectionString);
             const corePool = await dbManager.getPool('CORE', coreConnectionString);
 
-            const userAccountId = auth.accountId;
+            const userAccountId = (session?.user as any)?.productContexts?.ORION?.accountId || (session?.user as any)?.account_id;
             let whereClause = "";
-            if (userAccountId && !auth.permissions.includes('admin')) {
+            if (userAccountId) {
                 const { getAccountHierarchy } = await import("@/core/utils/hierarchy");
                 const hierarchy = await getAccountHierarchy(userAccountId);
                 if (hierarchy.length > 0) {
@@ -63,9 +64,9 @@ export async function GET(req: NextRequest) {
 }
 
 export async function POST(req: NextRequest) {
-    const auth = await authenticateApiRequest(req);
-    if (!auth.authorized || !auth.permissions.includes('orion:user:manage')) {
-        return NextResponse.json({ error: "Unauthorized. Permission required: orion:user:manage" }, { status: 403 });
+    const session = await getServerSession(authOptions);
+    if (!session || !(session.user as any).permissions.includes('orion:user:manage')) {
+        return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
     }
 
     const data = await req.json();
@@ -73,8 +74,8 @@ export async function POST(req: NextRequest) {
         return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
     }
 
-    const userAccountId = auth.accountId;
-    if (userAccountId && !auth.permissions.includes('admin')) {
+    const userAccountId = (session?.user as any)?.productContexts?.ORION?.accountId || (session?.user as any)?.account_id;
+    if (userAccountId) {
         const { getAccountHierarchy } = await import("@/core/utils/hierarchy");
         const hierarchy = await getAccountHierarchy(userAccountId);
         if (!hierarchy.includes(Number(data.account_id))) {
@@ -120,7 +121,7 @@ export async function POST(req: NextRequest) {
             await orionPool.execute(sql, values as any[]);
 
             await AuditLogger.log({
-                username: auth.userId || 'api-key',
+                username: (session.user as any).email || (session.user as any).name,
                 screen: schema.title,
                 action: 'Data Insert',
                 status: 'Success',
@@ -137,9 +138,9 @@ export async function POST(req: NextRequest) {
 }
 
 export async function PUT(req: NextRequest) {
-    const auth = await authenticateApiRequest(req);
-    if (!auth.authorized || !auth.permissions.includes('orion:user:manage')) {
-        return NextResponse.json({ error: "Unauthorized. Permission required: orion:user:manage" }, { status: 403 });
+    const session = await getServerSession(authOptions);
+    if (!session || !(session.user as any).permissions.includes('orion:user:manage')) {
+        return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
     }
 
     try {
@@ -147,8 +148,8 @@ export async function PUT(req: NextRequest) {
         const { _identifiers, role, permissions, ...data } = body;
         const email = _identifiers.email || data.email;
 
-        const userAccountId = auth.accountId;
-        if (userAccountId && data.account_id && !auth.permissions.includes('admin')) {
+        const userAccountId = (session?.user as any)?.productContexts?.ORION?.accountId || (session?.user as any)?.account_id;
+        if (userAccountId && data.account_id) {
             const { getAccountHierarchy } = await import("@/core/utils/hierarchy");
             const hierarchy = await getAccountHierarchy(userAccountId);
             if (!hierarchy.includes(Number(data.account_id))) {
@@ -189,7 +190,7 @@ export async function PUT(req: NextRequest) {
             await orionPool.execute(sql, [...setValues, ...whereValues] as any[]);
 
             await AuditLogger.log({
-                username: auth.userId || 'api-key',
+                username: (session.user as any).email || (session.user as any).name,
                 screen: schema.title,
                 action: 'Data Update',
                 status: 'Success',
@@ -206,9 +207,9 @@ export async function PUT(req: NextRequest) {
 }
 
 export async function DELETE(req: NextRequest) {
-    const auth = await authenticateApiRequest(req);
-    if (!auth.authorized || !auth.permissions.includes('orion:user:manage')) {
-        return NextResponse.json({ error: "Unauthorized. Permission required: orion:user:manage" }, { status: 403 });
+    const session = await getServerSession(authOptions);
+    if (!session || !(session.user as any).permissions.includes('orion:user:manage')) {
+        return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
     }
 
     try {
@@ -243,7 +244,7 @@ export async function DELETE(req: NextRequest) {
             await orionPool.execute(sql, whereValues as any[]);
 
             await AuditLogger.log({
-                username: auth.userId || 'api-key',
+                username: (session.user as any).email || (session.user as any).name,
                 screen: schema.title,
                 action: 'Data Delete',
                 status: 'Success',

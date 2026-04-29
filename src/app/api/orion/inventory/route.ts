@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
+import { getServerSession } from "next-auth/next";
+import { authOptions } from "@/app/api/auth/[...nextauth]/route";
 import { dbManager } from "@/core/db/manager";
 import { AuditLogger } from "@/core/utils/audit-logger";
-import { authenticateApiRequest } from "@/core/auth/api-auth";
 import schemaRaw from "@/schemas/orion-inventory.json";
 
 const schema = schemaRaw as any;
@@ -13,9 +14,9 @@ let mockInventory = [
 ];
 
 export async function GET(req: NextRequest) {
-    const auth = await authenticateApiRequest(req);
-    if (!auth.authorized || !auth.permissions.includes('orion:inventory:manage')) {
-        return NextResponse.json({ error: "Unauthorized. Permission required: orion:inventory:manage" }, { status: 403 });
+    const session = await getServerSession(authOptions);
+    if (!session || (session.user as any).role !== 'admin') {
+        return NextResponse.json({ error: "Unauthorized. Root access required." }, { status: 403 });
     }
 
     try {
@@ -48,9 +49,9 @@ export async function GET(req: NextRequest) {
 }
 
 export async function POST(req: NextRequest) {
-    const auth = await authenticateApiRequest(req);
-    if (!auth.authorized || !auth.permissions.includes('orion:inventory:manage')) {
-        return NextResponse.json({ error: "Unauthorized. Permission required: orion:inventory:manage" }, { status: 403 });
+    const session = await getServerSession(authOptions);
+    if (!session || (session.user as any).role !== 'admin') {
+        return NextResponse.json({ error: "Unauthorized. Root access required." }, { status: 403 });
     }
 
     const data = await req.json();
@@ -70,7 +71,7 @@ export async function POST(req: NextRequest) {
             await pool.execute(sql, values as any[]);
 
             await AuditLogger.log({
-                username: auth.userId || 'api-key',
+                username: (session.user as any).email || (session.user as any).name,
                 screen: schema.title,
                 action: 'Data Insert',
                 status: 'Success',
@@ -90,9 +91,9 @@ export async function POST(req: NextRequest) {
 }
 
 export async function PUT(req: NextRequest) {
-    const auth = await authenticateApiRequest(req);
-    if (!auth.authorized || !auth.permissions.includes('orion:inventory:manage')) {
-        return NextResponse.json({ error: "Unauthorized. Permission required: orion:inventory:manage" }, { status: 403 });
+    const session = await getServerSession(authOptions);
+    if (!session || (session.user as any).role !== 'admin') {
+        return NextResponse.json({ error: "Unauthorized. Root access required." }, { status: 403 });
     }
 
     const { _identifiers, ...data } = await req.json();
@@ -110,7 +111,7 @@ export async function PUT(req: NextRequest) {
             await pool.execute(sql, [...setValues, ...whereValues] as any[]);
 
             await AuditLogger.log({
-                username: auth.userId || 'api-key',
+                username: (session.user as any).email || (session.user as any).name,
                 screen: schema.title,
                 action: 'Data Update',
                 status: 'Success',
@@ -128,9 +129,9 @@ export async function PUT(req: NextRequest) {
 }
 
 export async function DELETE(req: NextRequest) {
-    const auth = await authenticateApiRequest(req);
-    if (!auth.authorized || !auth.permissions.includes('orion:inventory:manage')) {
-        return NextResponse.json({ error: "Unauthorized. Permission required: orion:inventory:manage" }, { status: 403 });
+    const session = await getServerSession(authOptions);
+    if (!session || (session.user as any).role !== 'admin') {
+        return NextResponse.json({ error: "Unauthorized. Root access required." }, { status: 403 });
     }
 
     const identifiers = await req.json();
@@ -146,7 +147,7 @@ export async function DELETE(req: NextRequest) {
             await pool.execute(sql, whereValues as any[]);
 
             await AuditLogger.log({
-                username: auth.userId || 'api-key',
+                username: (session.user as any).email || (session.user as any).name,
                 screen: schema.title,
                 action: 'Data Delete',
                 status: 'Success',

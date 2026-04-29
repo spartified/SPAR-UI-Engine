@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { aggregatorService } from "../../../services/aggregator-service";
+import { dbManager } from "@/core/db/manager";
 import { authenticateApiRequest } from "@/core/auth/api-auth";
 
 export async function GET(req: NextRequest) {
@@ -8,18 +8,23 @@ export async function GET(req: NextRequest) {
         return NextResponse.json({ error: auth.error || "Unauthorized" }, { status: 401 });
     }
 
-    const iccid = req.nextUrl.searchParams.get('inventoryId');
-    const aggregatorAccountId = req.nextUrl.searchParams.get('aggregatorId');
+    const { searchParams } = new URL(req.url);
+    const inventoryId = searchParams.get('inventoryId');
 
-    if (!iccid || !aggregatorAccountId) {
-        return NextResponse.json({ error: "Missing inventoryId or aggregatorId" }, { status: 400 });
+    if (!inventoryId) {
+        return NextResponse.json({ error: "Missing inventoryId" }, { status: 400 });
     }
 
     try {
-        const sims = await aggregatorService.getInventorySims(aggregatorAccountId, iccid);
-        return NextResponse.json(sims);
+        const pool = await dbManager.getPool('orion', process.env.ORION_DB_URL!);
+        const [rows]: any = await pool.execute(
+            "SELECT * FROM esims WHERE batch_id = (SELECT id FROM inventory_batches WHERE inventory_id = ? LIMIT 1)",
+            [inventoryId]
+        );
+
+        return NextResponse.json(rows);
     } catch (error: any) {
-        console.error("Failed to fetch inventory SIMs:", error);
-        return NextResponse.json({ error: error.message || "Failed to fetch SIMs" }, { status: 500 });
+        console.error("Failed to fetch SIMs for inventory:", error);
+        return NextResponse.json({ error: error.message || "Fetch Failed" }, { status: 500 });
     }
 }
