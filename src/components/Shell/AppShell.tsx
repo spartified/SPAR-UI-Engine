@@ -77,7 +77,7 @@ const AppShellContent = ({ children }: { children: React.ReactNode }) => {
     }).filter(Boolean), [user?.permissions, modules, categories]);
 
     const userMenuItems: any[] = [
-        ...(user?.permissions?.includes('user:manage') ? [
+        ...(user?.permissions?.includes('api-key:manage') ? [
             {
                 key: "api-keys",
                 icon: <SettingOutlined />,

@@ -80,6 +80,14 @@ export const PLATFORM_MODULES: ModuleDefinition[] = [
         permission: 'grafana:app',
         externalUrl: process.env.NEXT_PUBLIC_GRAFANA_URL_APP
     },
+    {
+        id: 'api-key-management',
+        title: 'Developer API Keys',
+        path: '/configuration/api-keys',
+        category: 'Hidden',
+        permission: 'api-key:manage',
+        dbPool: 'CORE'
+    },
 ];
 
 export const PLATFORM_CATEGORIES = [

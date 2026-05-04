@@ -86,6 +86,7 @@ export async function POST(req: NextRequest) {
 
         const params = [
             data.name || null,
+            JSON.stringify(data.supported_countries || []),
             data.account_id || data.aggregator_account_id || null, // Fallback if necessary
             data.aggregator_account_id || null,
             data.data_limit_mb || 0,
@@ -101,10 +102,10 @@ export async function POST(req: NextRequest) {
 
         const [result]: any = await pool.execute(
             `INSERT INTO package_templates (
-                name, account_id, aggregator_account_id, data_limit_mb, 
+                name, supported_countries, account_id, aggregator_account_id, data_limit_mb, 
                 duration_seconds, sms_limit, voice_limit, traffic_policy, sync_status,
                 remote_id, earliest_available_date, latest_available_date
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
             params
         );
 

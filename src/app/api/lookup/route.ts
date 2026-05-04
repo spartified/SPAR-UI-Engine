@@ -92,18 +92,36 @@ export async function POST(req: NextRequest) {
         // 1. Permission Discovery (Contextual)
         if (dbPool === 'SYSTEM' && query === 'available_permissions') {
             const userPermissions = (session?.user as any)?.permissions || [];
-            const availablePermissions = MODULE_REGISTRY
+
+            // Fetch dynamic modules from DB
+            let dynamicModules: any[] = [];
+            try {
+                const corePool = await dbManager.getPool('CORE', process.env.CORE_DB_URL!);
+                const [rows]: any = await corePool.execute('SELECT * FROM portal_modules WHERE is_active = 1');
+                dynamicModules = rows;
+            } catch (err) {
+                console.warn("[Lookup] Dynamic module fetch failed, falling back to static registry:", err);
+            }
+
+            const allModules = [...MODULE_REGISTRY, ...dynamicModules];
+
+            const availablePermissions = allModules
                 .filter(m => {
                     if (!userPermissions.includes(m.permission)) return false;
-                    if (!m.dbPool || m.dbPool === 'CORE') return true;
-                    return !!(process.env as any)[`${m.dbPool}_DB_URL`];
+                    const pool = m.dbPool || m.db_pool;
+                    if (!pool || pool === 'CORE') return true;
+                    return !!(process.env as any)[`${pool}_DB_URL`];
                 })
                 .map(m => {
-                    let prefix = 'Platform: ';
-                    if (m.permission === 'grafana') prefix = 'Grafana: ';
-                    else if (m.dbPool) prefix = `${m.dbPool}: `;
+                    const pool = m.dbPool || m.db_pool;
+                    const title = m.title;
+                    const permission = m.permission;
 
-                    return { label: `${prefix}${m.title}`, value: m.permission };
+                    let prefix = 'Platform: ';
+                    if (permission.startsWith('grafana')) prefix = 'Grafana: ';
+                    else if (pool && pool !== 'CORE') prefix = `${pool}: `;
+
+                    return { label: `${prefix}${title}`, value: permission };
                 });
             const uniquePermissions = Array.from(new Map(availablePermissions.map(p => [p.value, p])).values());
             return NextResponse.json(uniquePermissions);
