@@ -107,7 +107,12 @@ export async function PUT(req: NextRequest) {
             if (data.package_id) {
                 const iccid = _identifiers.iccid;
                 const [existing]: any = await pool.execute(
-                    `SELECT package_id, aggregator_id FROM ${schema.tableName} WHERE iccid = ?`,
+                    `SELECT e.package_id, k.id as aggregator_id 
+                     FROM ${schema.tableName} e
+                     JOIN inventory_batches b ON e.batch_id = b.id
+                     JOIN aggregators a ON b.aggregator = a.name
+                     JOIN aggregator_api_keys k ON a.id = k.aggregator_id
+                     WHERE e.iccid = ?`,
                     [iccid]
                 );
 

@@ -24,11 +24,20 @@ export interface ModuleDefinition {
     externalUrl?: string;
 }
 
+export const ICON_MAP: Record<string, React.ReactNode> = {
+    BarChartOutlined: React.createElement(BarChartOutlined),
+    GlobalOutlined: React.createElement(GlobalOutlined),
+    TeamOutlined: React.createElement(TeamOutlined),
+    HistoryOutlined: React.createElement(HistoryOutlined),
+    DashboardOutlined: React.createElement(DashboardOutlined),
+    ApartmentOutlined: React.createElement(ApartmentOutlined),
+    ClusterOutlined: React.createElement(ClusterOutlined),
+    DatabaseOutlined: React.createElement(DatabaseOutlined),
+    BarcodeOutlined: React.createElement(BarcodeOutlined),
+    GiftOutlined: React.createElement(GiftOutlined),
+};
 
-export const MODULE_REGISTRY: ModuleDefinition[] = [
-    // ----------------------------------------------------------------
-    // Platform-level modules (generic, always present)
-    // ----------------------------------------------------------------
+export const PLATFORM_MODULES: ModuleDefinition[] = [
     {
         id: 'user-management',
         title: 'User Management',
@@ -71,90 +80,15 @@ export const MODULE_REGISTRY: ModuleDefinition[] = [
         permission: 'grafana:app',
         externalUrl: process.env.NEXT_PUBLIC_GRAFANA_URL_APP
     },
-    // PRODUCT_MODULES_START — do not remove this comment, used by deploy scripts
-    // --- Orion CMP Modules (injected by deploy.sh) ---
-    {
-        id: 'orion-dashboard',
-        title: 'Dashboard',
-        path: '/dashboard',
-        category: 'OrionDashboard',
-        permission: 'orion:dashboard:read',
-        schema: '/schemas/orion-dashboard.json',
-        dbPool: 'ORION'
-    },
-    {
-        id: 'orion-accounts',
-        title: 'Accounts',
-        path: '/accounts',
-        category: 'OrionAccounts',
-        permission: 'orion:account:manage',
-        schema: '/schemas/orion-accounts.json',
-        dbPool: 'ORION'
-    },
-    {
-        id: 'orion-aggregators',
-        title: 'Aggregator Management',
-        path: '/aggregators',
-        category: 'OrionAggregators',
-        permission: 'orion:aggregator:manage',
-        schema: '/schemas/orion-aggregators.json',
-        dbPool: 'ORION'
-    },
-    {
-        id: 'orion-users',
-        title: 'Users',
-        path: '/users',
-        category: 'OrionUsers',
-        permission: 'orion:user:manage',
-        schema: '/schemas/orion-users.json',
-        dbPool: 'ORION'
-    },
-    {
-        id: 'orion-inventory',
-        title: 'eSIM Inventory',
-        path: '/inventory',
-        category: 'OrionInventory',
-        permission: 'orion:inventory:manage',
-        schema: '/schemas/orion-inventory.json',
-        dbPool: 'ORION'
-    },
-    {
-        id: 'orion-esims',
-        title: 'SIM Management',
-        path: '/esims',
-        category: 'OrionSIMs',
-        permission: 'orion:esim:manage',
-        schema: '/schemas/orion-esims.json',
-        dbPool: 'ORION'
-    },
-    {
-        id: 'orion-packages',
-        title: 'Package Management',
-        path: '/packages',
-        category: 'OrionPackages',
-        permission: 'orion:package:manage',
-        dbPool: 'ORION'
-    },
-    // PRODUCT_MODULES_END
 ];
 
-export const CATEGORIES = [
-    // ----------------------------------------------------------------
-    // Platform-level categories (generic)
-    // Product-specific categories are injected by their deploy.sh script
-    // ----------------------------------------------------------------
-    { id: 'Reports', title: 'Reports', icon: React.createElement(BarChartOutlined) },
-    { id: 'User Management', title: 'User Management', icon: React.createElement(TeamOutlined) },
-    { id: 'Audit Trail', title: 'Audit Trail', icon: React.createElement(HistoryOutlined) },
-    { id: 'Monitoring', title: 'Monitoring', icon: React.createElement(GlobalOutlined) },
-    // PRODUCT_CATEGORIES_START — do not remove this comment, used by deploy scripts
-    // --- Orion CMP Categories (injected by deploy.sh) ---
-    { id: 'OrionDashboard', title: 'Dashboard', icon: React.createElement(DashboardOutlined) },
-    { id: 'OrionAccounts', title: 'Accounts', icon: React.createElement(ApartmentOutlined) },
-    { id: 'OrionAggregators', title: 'Aggregators', icon: React.createElement(ClusterOutlined) },
-    { id: 'OrionInventory', title: 'eSIM Inventory', icon: React.createElement(DatabaseOutlined) },
-    { id: 'OrionSIMs', title: 'SIM Management', icon: React.createElement(BarcodeOutlined) },
-    { id: 'OrionPackages', title: 'Packages', icon: React.createElement(GiftOutlined) },
-    { id: 'OrionUsers', title: 'Orion Users', icon: React.createElement(TeamOutlined) },
-    // PRODUCT_CATEGORIES_END
+export const PLATFORM_CATEGORIES = [
+    { id: 'Reports', title: 'Reports', icon: ICON_MAP.BarChartOutlined },
+    { id: 'User Management', title: 'User Management', icon: ICON_MAP.TeamOutlined },
+    { id: 'Audit Trail', title: 'Audit Trail', icon: ICON_MAP.HistoryOutlined },
+    { id: 'Monitoring', title: 'Monitoring', icon: ICON_MAP.GlobalOutlined },
 ];
+
+// Fallback for parts of the app still using static imports
+export const MODULE_REGISTRY = [...PLATFORM_MODULES];
+export const CATEGORIES = [...PLATFORM_CATEGORIES];

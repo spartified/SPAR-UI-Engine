@@ -21,7 +21,11 @@ export interface TelnaPackageTemplate {
 
 class AggregatorService {
     private getBaseUrl() {
-        return process.env.AGG_SERVICE_URL || "http://localhost:8005/portal";
+        const url = process.env.AGG_SERVICE_URL || "http://207.180.220.203:8000/portal";
+        if (!process.env.AGG_SERVICE_URL) {
+            console.warn(`[AggregatorService] AGG_SERVICE_URL not set, defaulting to: ${url}`);
+        }
+        return url;
     }
 
     private getHeaders(aggregatorId: number | string) {
@@ -169,8 +173,8 @@ class AggregatorService {
     public async subscribePackage(aggregatorAccountId: number, iccid: string, remotePackageTemplateId: string) {
         const requestId = crypto.randomUUID();
         const data = {
-            sim: iccid,
-            package_template: remotePackageTemplateId
+            iccid: iccid.toString(),
+            template_id: remotePackageTemplateId.toString()
         };
 
         console.log("Calling Aggregator Subscribe Package:", { baseUrl: this.getBaseUrl(), iccid, remotePackageTemplateId });

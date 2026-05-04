@@ -6,6 +6,7 @@ import { SessionProvider } from "next-auth/react";
 import { Nunito_Sans } from "next/font/google";
 import { ThemeProvider } from "@/context/ThemeContext";
 import { TenantProvider } from "@/context/TenantContext";
+import { ModuleProvider } from "@/context/ModuleContext";
 import "./globals.css";
 
 const nunito = Nunito_Sans({
@@ -27,7 +28,9 @@ export default function RootLayout({
             <ThemeProvider>
               <AuthProvider>
                 <TenantProvider>
-                  {children}
+                  <ModuleProvider>
+                    {children}
+                  </ModuleProvider>
                 </TenantProvider>
               </AuthProvider>
             </ThemeProvider>

@@ -64,21 +64,35 @@ export async function authenticateApiRequest(req: NextRequest): Promise<ApiAuthR
                 const email = userRows[0]?.email;
 
                 if (email) {
-                    const pools = Array.from(new Set(MODULE_REGISTRY.map(m => m.dbPool).filter(Boolean)));
+                    // Resolve all unique database pools from both static and dynamic registries
+                    const staticPools = MODULE_REGISTRY.map(m => m.dbPool).filter(Boolean);
+                    let dynamicPools: string[] = [];
+                    try {
+                        const [moduleRows]: any = await corePool.execute("SELECT DISTINCT db_pool FROM portal_modules WHERE is_active = 1 AND db_pool IS NOT NULL");
+                        dynamicPools = moduleRows.map((r: any) => r.db_pool);
+                    } catch (err) {
+                        console.warn("[API Auth] Failed to fetch dynamic pools:", err);
+                    }
+
+                    const pools = Array.from(new Set([...staticPools, ...dynamicPools]));
+                    
                     for (const poolName of pools) {
                         if (poolName === 'CORE') continue;
                         const poolConnString = (process.env as any)[`${poolName}_DB_URL`];
-                        if (typeof poolConnString === 'string' && typeof poolName === 'string') {
+                        if (typeof poolConnString === 'string') {
                             try {
-                                const pPool = await dbManager.getPool(poolName, poolConnString);
-                                const [pRows]: any = await pPool.execute(
+                                const pPool = await dbManager.getPool(poolName as any, poolConnString);
+                                const [queryRows]: any = await pPool.execute(
                                     `SELECT account_id, role_id FROM users WHERE email = ? AND status = 'ACTIVE' LIMIT 1`,
                                     [email]
                                 );
+                                const pRows = queryRows as any[];
                                 if (pRows.length > 0) {
-                                    productContexts[poolName] = { accountId: pRows[0].account_id, roleId: pRows[0].role_id };
-                                    if (pRows[0].role_id) {
-                                        const [rRows]: any = await pPool.execute(`SELECT permissions FROM roles WHERE id = ? LIMIT 1`, [pRows[0].role_id]);
+                                    const row = pRows[0];
+                                    // @ts-ignore
+                                    productContexts[poolName] = { accountId: row.account_id, roleId: row.role_id };
+                                    if (row.role_id) {
+                                        const [rRows]: any = await pPool.execute(`SELECT permissions FROM roles WHERE id = ? LIMIT 1`, [row.role_id]);
                                         if (rRows?.[0]?.permissions) {
                                             const pms = typeof rRows[0].permissions === 'string' ? JSON.parse(rRows[0].permissions) : rRows[0].permissions;
                                             permissions.push(...pms);

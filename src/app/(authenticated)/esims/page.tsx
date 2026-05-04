@@ -12,6 +12,7 @@ import esimsSchema from '@/schemas/orion-esims.json';
 
 const BULK_ACTIONS = [
     { key: 'ACTIVATE', label: 'Activate', icon: <PlayCircleOutlined />, color: '#52c41a' },
+    { key: 'CHANGE_PACKAGE', label: 'Change Package', icon: <ReloadOutlined />, color: '#1890ff' },
     { key: 'SUSPEND', label: 'Suspend', icon: <PauseCircleOutlined />, color: '#faad14' },
     { key: 'RESUME', label: 'Resume', icon: <ReloadOutlined />, color: '#1890ff' },
     { key: 'DEACTIVATE', label: 'Deactivate', icon: <StopOutlined />, color: '#ff4d4f' },
@@ -126,8 +127,7 @@ export default function DeviceLifecyclePage() {
             return;
         }
 
-        if (action === 'ACTIVATE') {
-            alert('DEBUG: ACTIVATE CLICKED - Opening Modal');
+        if (action === 'ACTIVATE' || action === 'CHANGE_PACKAGE') {
             setActivateModalVisible(true);
             return;
         }
@@ -181,24 +181,32 @@ export default function DeviceLifecyclePage() {
                 alignItems: 'center'
             }}>
                 <Space>
-                    {BULK_ACTIONS.map(action => (
-                        <Button
-                            key={action.key}
-                            icon={action.icon}
-                            loading={bulkLoading && bulkAction === action.key}
-                            disabled={selectedRows.length === 0}
-                            onClick={() => {
-                                setBulkAction(action.key);
-                                handleBulkAction(action.key);
-                            }}
-                            style={{
-                                borderColor: action.color,
-                                color: action.color
-                            }}
-                        >
-                            {action.label}
-                        </Button>
-                    ))}
+                    {BULK_ACTIONS.map(action => {
+                        // 1. Hide Activate if any selected SIM is already ACTIVATED
+                        if (action.key === 'ACTIVATE' && selectedRows.some(r => r.status === 'ACTIVATED')) return null;
+                        
+                        // 2. Hide Change Package if any selected SIM is NOT ACTIVATED
+                        if (action.key === 'CHANGE_PACKAGE' && (selectedRows.length === 0 || selectedRows.some(r => r.status !== 'ACTIVATED'))) return null;
+
+                        return (
+                            <Button
+                                key={action.key}
+                                icon={action.icon}
+                                loading={bulkLoading && bulkAction === action.key}
+                                disabled={selectedRows.length === 0}
+                                onClick={() => {
+                                    setBulkAction(action.key);
+                                    handleBulkAction(action.key);
+                                }}
+                                style={{
+                                    borderColor: action.color,
+                                    color: action.color
+                                }}
+                            >
+                                {action.label}
+                            </Button>
+                        );
+                    })}
 
                     <Button
                         disabled={selectedRows.length === 0 || selectedRows.some(r => r.status !== 'AVAILABLE')}
@@ -220,9 +228,9 @@ export default function DeviceLifecyclePage() {
                 onSelectionChange={(rows) => setSelectedRows(rows)}
             />
 
-            {/* Activation Modal */}
+            {/* Activation / Change Package Modal */}
             <Modal
-                title="Activate eSIM(s)"
+                title={bulkAction === 'CHANGE_PACKAGE' ? "Change eSIM Package" : "Activate eSIM(s)"}
                 open={activateModalVisible}
                 onOk={processActivate}
                 onCancel={() => setActivateModalVisible(false)}

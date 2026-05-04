@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { dbManager } from "@/core/db/manager";
 import { authenticateApiRequest } from "@/core/auth/api-auth";
+import { aggregatorService } from "../../services/aggregator-service";
 
 export async function GET(req: NextRequest) {
     const auth = await authenticateApiRequest(req);
@@ -16,15 +17,23 @@ export async function GET(req: NextRequest) {
     }
 
     try {
-        const pool = await dbManager.getPool('orion', process.env.ORION_DB_URL!);
+        // 1. Validate the aggregator exists in local DB to ensure auth exists
+        const pool = await dbManager.getPool('ORION', process.env.ORION_DB_URL!);
         const [rows]: any = await pool.execute(
-            "SELECT * FROM inventory_batches WHERE aggregator_id = ? AND status = 'PENDING_FETCH'",
+            'SELECT * FROM aggregator_api_keys WHERE id = ?',
             [aggregatorId]
         );
 
-        return NextResponse.json(rows);
+        if (rows.length === 0) {
+            return NextResponse.json({ error: "Aggregator not found" }, { status: 404 });
+        }
+
+        // 2. Fetch inventories through the shared AggregatorService layer
+        const data = await aggregatorService.getInventories(Number(aggregatorId));
+        return NextResponse.json(data);
+
     } catch (error: any) {
-        console.error("Failed to fetch inventory batches:", error);
-        return NextResponse.json({ error: error.message || "Fetch Failed" }, { status: 500 });
+        console.error("Fetch Inventory Proxy Error:", error);
+        return NextResponse.json({ error: error.message || "Failed to fetch from external API" }, { status: 500 });
     }
 }

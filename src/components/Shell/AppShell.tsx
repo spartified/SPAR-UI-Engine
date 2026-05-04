@@ -16,7 +16,7 @@ import { useRouter, usePathname } from "next/navigation";
 import { useTheme } from "@/context/ThemeContext";
 
 import { TenantSwitcher } from "./TenantSwitcher";
-import { MODULE_REGISTRY, CATEGORIES } from "@/config/modules";
+import { useModules } from "@/context/ModuleContext";
 
 
 const { Header, Sider, Content } = Layout;
@@ -30,6 +30,7 @@ const AppShellContent = ({ children }: { children: React.ReactNode }) => {
     const { logout, user, loading } = useAuth();
     const loadingTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
     const { mode, toggleTheme, theme } = useTheme();
+    const { modules, categories, isLoading: modulesLoading } = useModules();
     const router = useRouter();
     const pathname = usePathname();
 
@@ -46,8 +47,8 @@ const AppShellContent = ({ children }: { children: React.ReactNode }) => {
     }, [loading, router]);
 
     // Memoize menuItems so it's only recomputed when permissions change, not on every render
-    const menuItems: any[] = useMemo(() => CATEGORIES.map((category: any) => {
-        const children = MODULE_REGISTRY
+    const menuItems: any[] = useMemo(() => categories.map((category: any) => {
+        const children = modules
             .filter(module => module.category === category.id && user?.permissions?.includes(module.permission))
             .map(module => ({
                 key: module.path,
@@ -73,7 +74,7 @@ const AppShellContent = ({ children }: { children: React.ReactNode }) => {
             children,
         };
 
-    }).filter(Boolean), [user?.permissions]);
+    }).filter(Boolean), [user?.permissions, modules, categories]);
 
     const userMenuItems: any[] = [
         ...(user?.permissions?.includes('user:manage') ? [
@@ -193,7 +194,7 @@ const AppShellContent = ({ children }: { children: React.ReactNode }) => {
                                 </div>
                             );
                         }
-                        const currentModule = MODULE_REGISTRY.find(m => pathname.startsWith(m.path));
+                        const currentModule = modules.find(m => pathname.startsWith(m.path));
                         if (currentModule && !user?.permissions?.includes(currentModule.permission)) {
                             return (
                                 <div style={{ textAlign: 'center', padding: '100px 0' }}>

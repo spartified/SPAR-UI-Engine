@@ -76,7 +76,14 @@ export async function POST(req: NextRequest) {
                 const remotePackageId = pkgRows[0].remote_id;
 
                 // Sync each SIM with Aggregator
-                const [simRows]: any = await pool.execute(`SELECT id, iccid, aggregator_id FROM esims WHERE id IN (${placeholders})`, esim_ids);
+                const [simRows]: any = await pool.execute(`
+                    SELECT e.id, e.iccid, k.id as aggregator_id 
+                    FROM esims e 
+                    JOIN inventory_batches b ON e.batch_id = b.id 
+                    JOIN aggregators a ON b.aggregator = a.name 
+                    JOIN aggregator_api_keys k ON a.id = k.aggregator_id 
+                    WHERE e.id IN (${placeholders})
+                `, esim_ids);
 
                 for (const sim of simRows) {
                     console.log(`[ESIM Activation] Activating ICCID ${sim.iccid} with Package ${remotePackageId}`);

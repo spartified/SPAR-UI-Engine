@@ -38,7 +38,7 @@ export async function GET(req: NextRequest) {
                 }
 
                 if (idToUse) {
-                    const serviceUrl = process.env.AGG_SERVICE_URL || 'http://localhost:8005/portal';
+                    const serviceUrl = process.env.AGG_SERVICE_URL || 'http://207.180.220.203:8000/portal';
                     const endpoint = `${serviceUrl}/v1/core/countries?offset=0&count=100`;
 
                     console.log(`[AggregatorsBase] Redirecting country fetch for aggregator ${idToUse} to ${serviceUrl}`);

@@ -28,8 +28,26 @@ services:
       - NEXT_PUBLIC_GRAFANA_URL_SERVER=http://grafana.internal/d-solo/server/overview?orgId=1&panelId=1&theme=dark
       - NEXT_PUBLIC_GRAFANA_URL_DB=http://grafana.internal/d-solo/db/overview?orgId=1&panelId=1&theme=dark
       - NEXT_PUBLIC_GRAFANA_URL_APP=http://grafana.internal/d-solo/app/metrics?orgId=1&panelId=1&theme=dark
+      - AGG_SERVICE_URL=http://207.180.220.203:8000/portal
     depends_on:
       - keycloak
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    restart: always
+
+  orion-service:
+    build:
+      context: ../SPAR-ORION-Portal
+      dockerfile: Dockerfile
+    image: orion-service:latest
+    container_name: orion-service
+    ports:
+      - "3001:3001"
+    environment:
+      - CORE_DB_URL=mysql://frauddb:Fraud@123@host.docker.internal:3306/spar_ui_engine
+      - ORION_DB_URL=mysql://frauddb:Fraud@123@host.docker.internal:3306/orion
+      - PORT=3001
+      - AGG_SERVICE_URL=http://207.180.220.203:8000/portal
     extra_hosts:
       - "host.docker.internal:host-gateway"
     restart: always

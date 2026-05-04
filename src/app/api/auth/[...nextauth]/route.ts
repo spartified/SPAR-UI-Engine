@@ -86,8 +86,18 @@ export const authOptions: NextAuthOptions = {
                     const userEmail = (profile as any)?.email || token.email || user?.email;
 
                     if (token.role === 'admin') {
-                        const allModulePermissions = MODULE_REGISTRY.map((m: any) => m.permission);
-                        token.permissions = Array.from(new Set(['node:read', ...allModulePermissions]));
+                        // Fetch ALL permissions from the Dynamic Registry
+                        try {
+                            const corePool = await dbManager.getPool('CORE', process.env.CORE_DB_URL!);
+                            const [rows]: any = await corePool.execute('SELECT permission FROM portal_modules WHERE is_active = 1');
+                            const dbPermissions = rows.map((r: any) => r.permission).filter(Boolean);
+                            const staticPermissions = MODULE_REGISTRY.map((m: any) => m.permission);
+                            
+                            token.permissions = Array.from(new Set(['node:read', ...staticPermissions, ...dbPermissions]));
+                        } catch (err) {
+                            console.error("[JWT] Dynamic permission fetch failed for admin:", err);
+                            token.permissions = ['node:read', ...MODULE_REGISTRY.map((m: any) => m.permission)];
+                        }
                         token.account_id = (profile as any)?.account_id || (profile as any)?.tenant_id || 1;
                     } else {
                         // 1. Fetch Platform Permissions (CORE)
