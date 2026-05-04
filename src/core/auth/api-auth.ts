@@ -82,25 +82,48 @@ export async function authenticateApiRequest(req: NextRequest): Promise<ApiAuthR
                         if (typeof poolConnString === 'string') {
                             try {
                                 const pPool = await dbManager.getPool(poolName as any, poolConnString);
+                                
+                                // Fetch user record - using SELECT * to stay compatible with different schemas
                                 const [queryRows]: any = await pPool.execute(
-                                    `SELECT account_id, role_id FROM users WHERE email = ? AND status = 'ACTIVE' LIMIT 1`,
+                                    `SELECT * FROM users WHERE email = ? AND status = 'ACTIVE' LIMIT 1`,
                                     [email]
                                 );
                                 const pRows = queryRows as any[];
+                                
                                 if (pRows.length > 0) {
                                     const row = pRows[0];
                                     // @ts-ignore
-                                    productContexts[poolName] = { accountId: row.account_id, roleId: row.role_id };
-                                    if (row.role_id) {
-                                        const [rRows]: any = await pPool.execute(`SELECT permissions FROM roles WHERE id = ? LIMIT 1`, [row.role_id]);
-                                        if (rRows?.[0]?.permissions) {
-                                            const pms = typeof rRows[0].permissions === 'string' ? JSON.parse(rRows[0].permissions) : rRows[0].permissions;
-                                            permissions.push(...pms);
+                                    productContexts[poolName] = { 
+                                        accountId: row.account_id || row.accountId || null, 
+                                        roleId: row.role_id || row.roleId || null 
+                                    };
+
+                                    // Priority 1: Direct JSON permissions (used by Orion)
+                                    if (row.permissions) {
+                                        try {
+                                            const pms = typeof row.permissions === 'string' ? JSON.parse(row.permissions) : row.permissions;
+                                            if (Array.isArray(pms)) permissions.push(...pms);
+                                        } catch (pe) { 
+                                            console.warn(`[API Auth] Failed to parse permissions for ${poolName}`, pe); 
+                                        }
+                                    }
+
+                                    // Priority 2: Role-based permissions (if role_id exists)
+                                    const roleId = row.role_id || row.roleId;
+                                    if (roleId) {
+                                        try {
+                                            const [rRows]: any = await pPool.execute(`SELECT permissions FROM roles WHERE id = ? LIMIT 1`, [roleId]);
+                                            if (rRows?.[0]?.permissions) {
+                                                const pms = typeof rRows[0].permissions === 'string' ? JSON.parse(rRows[0].permissions) : rRows[0].permissions;
+                                                if (Array.isArray(pms)) permissions.push(...pms);
+                                            }
+                                        } catch (roleErr) { 
+                                            // Roles table might not exist in this product
                                         }
                                     }
                                 }
-                            } catch (e) {
-                                console.warn(`[API Auth] Context resolution failed for ${poolName}:`, e);
+                            } catch (e: any) {
+                                console.warn(`[API Auth] Context resolution failed for ${poolName}:`, e.message);
                             }
                         }
                     }
