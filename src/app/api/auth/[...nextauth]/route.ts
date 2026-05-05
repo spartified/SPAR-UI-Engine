@@ -112,13 +112,21 @@ export const authOptions: NextAuthOptions = {
                             console.error("[JWT] CORE Permission lookup failed:", coreErr);
                         }
 
-                        // 2. Resolve Product Contexts and Module Permissions (Generic)
-                        const pools = Array.from(new Set(MODULE_REGISTRY.map(m => m.dbPool).filter(Boolean)));
+                        // 2. Resolve Product Contexts and Module Permissions (Dynamic Discovery)
+                        let pools: string[] = [];
+                        try {
+                            const corePool = await dbManager.getPool('CORE', process.env.CORE_DB_URL!);
+                            const [pRows]: any = await corePool.execute('SELECT DISTINCT db_pool FROM portal_modules WHERE is_active = 1');
+                            pools = pRows.map((r: any) => r.db_pool).filter((p: any) => p && p !== 'CORE');
+                        } catch (pErr) {
+                            console.warn("[JWT] Dynamic pool discovery failed, falling back to static registry:", pErr);
+                            pools = Array.from(new Set(MODULE_REGISTRY.map(m => m.dbPool).filter(p => p && p !== 'CORE')));
+                        }
+
                         for (const poolName of pools) {
-                            if (poolName === 'CORE') continue;
                             const poolConnString = (process.env as any)[`${poolName}_DB_URL`];
 
-                            if (typeof poolConnString === 'string' && typeof poolName === 'string') {
+                            if (typeof poolConnString === 'string') {
                                 try {
                                     const pPool = await dbManager.getPool(poolName, poolConnString);
                                     const [rows]: any = await pPool.execute(

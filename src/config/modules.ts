@@ -9,6 +9,7 @@ import {
     DatabaseOutlined,
     BarcodeOutlined,
     GiftOutlined,
+    MobileOutlined,
 } from '@ant-design/icons';
 import React from 'react';
 
@@ -35,6 +36,7 @@ export const ICON_MAP: Record<string, React.ReactNode> = {
     DatabaseOutlined: React.createElement(DatabaseOutlined),
     BarcodeOutlined: React.createElement(BarcodeOutlined),
     GiftOutlined: React.createElement(GiftOutlined),
+    MobileOutlined: React.createElement(MobileOutlined),
 };
 
 export const PLATFORM_MODULES: ModuleDefinition[] = [
@@ -90,13 +92,70 @@ export const PLATFORM_MODULES: ModuleDefinition[] = [
     },
 ];
 
+export const ORION_MODULES: ModuleDefinition[] = [
+    {
+        id: 'orion-dashboard',
+        title: 'Dashboard',
+        path: '/dashboard',
+        category: 'Orion',
+        permission: 'orion:dashboard:read',
+        schema: '/schemas/orion-dashboard.json',
+        dbPool: 'ORION'
+    },
+    {
+        id: 'orion-accounts',
+        title: 'Accounts',
+        path: '/accounts',
+        category: 'Orion',
+        permission: 'orion:account:manage',
+        schema: '/schemas/orion-accounts.json',
+        dbPool: 'ORION'
+    },
+    {
+        id: 'orion-users',
+        title: 'Orion Users',
+        path: '/users',
+        category: 'Orion',
+        permission: 'orion:user:manage',
+        schema: '/schemas/orion-users.json',
+        dbPool: 'ORION'
+    },
+    {
+        id: 'orion-inventory',
+        title: 'eSIM Inventory',
+        path: '/inventory',
+        category: 'Orion',
+        permission: 'orion:inventory:manage',
+        schema: '/schemas/orion-inventory.json',
+        dbPool: 'ORION'
+    },
+    {
+        id: 'orion-esims',
+        title: 'SIM Management',
+        path: '/esims',
+        category: 'Orion',
+        permission: 'orion:esim:manage',
+        schema: '/schemas/orion-esims.json',
+        dbPool: 'ORION'
+    },
+    {
+        id: 'orion-packages',
+        title: 'Package Management',
+        path: '/packages',
+        category: 'OrionPackages',
+        permission: 'orion:package:manage',
+        dbPool: 'ORION'
+    },
+];
+
 export const PLATFORM_CATEGORIES = [
     { id: 'Reports', title: 'Reports', icon: ICON_MAP.BarChartOutlined },
     { id: 'User Management', title: 'User Management', icon: ICON_MAP.TeamOutlined },
     { id: 'Audit Trail', title: 'Audit Trail', icon: ICON_MAP.HistoryOutlined },
     { id: 'Monitoring', title: 'Monitoring', icon: ICON_MAP.GlobalOutlined },
+    { id: 'Orion', title: 'Orion CMP', icon: ICON_MAP.MobileOutlined },
 ];
 
 // Fallback for parts of the app still using static imports
-export const MODULE_REGISTRY = [...PLATFORM_MODULES];
+export const MODULE_REGISTRY = [...PLATFORM_MODULES, ...ORION_MODULES];
 export const CATEGORIES = [...PLATFORM_CATEGORIES];
