@@ -120,7 +120,7 @@ export const authOptions: NextAuthOptions = {
                             pools = pRows.map((r: any) => r.db_pool).filter((p: any) => p && p !== 'CORE');
                         } catch (pErr) {
                             console.warn("[JWT] Dynamic pool discovery failed, falling back to static registry:", pErr);
-                            pools = Array.from(new Set(MODULE_REGISTRY.map(m => m.dbPool).filter(p => p && p !== 'CORE')));
+                            pools = Array.from(new Set(MODULE_REGISTRY.map(m => m.dbPool).filter((p): p is string => !!p && p !== 'CORE')));
                         }
 
                         for (const poolName of pools) {
