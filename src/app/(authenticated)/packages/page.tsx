@@ -64,6 +64,20 @@ export default function PackageManagementPage() {
             )
         },
         {
+            title: 'Coverage',
+            dataIndex: 'supported_countries',
+            key: 'supported_countries',
+            render: (countries: string[]) => {
+                const list = Array.isArray(countries) ? countries : [];
+                if (list.length === 0) return <Tag color="default">Global / None</Tag>;
+                return (
+                    <Tooltip title={list.join(', ')}>
+                        <Tag color="cyan">{list.length} Countries</Tag>
+                    </Tooltip>
+                );
+            }
+        },
+        {
             title: 'Sync Status',
             dataIndex: 'sync_status',
             key: 'sync_status',

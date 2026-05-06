@@ -37,8 +37,20 @@ export async function GET(req: NextRequest, { params }: { params: { accountId: s
                 `SELECT * FROM package_templates WHERE account_id IN (${targetHierarchy.join(',')})`,
                 []
             );
+            
+            // Parse supported_countries JSON
+            const results = rows.map((r: any) => {
+                if (typeof r.supported_countries === 'string') {
+                    try {
+                        r.supported_countries = JSON.parse(r.supported_countries);
+                    } catch (e) {
+                        r.supported_countries = [];
+                    }
+                }
+                return r;
+            });
 
-            return NextResponse.json(rows);
+            return NextResponse.json(results);
         }
     } catch (error: any) {
         console.error("External API GET packages failed:", error);

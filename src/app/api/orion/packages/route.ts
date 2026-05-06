@@ -28,7 +28,20 @@ export async function GET(req: NextRequest) {
         query += ` ORDER BY pt.created_at DESC`;
 
         const [rows]: any = await pool.execute(query);
-        return NextResponse.json(rows);
+        
+        // Parse supported_countries JSON
+        const results = rows.map((r: any) => {
+            if (typeof r.supported_countries === 'string') {
+                try {
+                    r.supported_countries = JSON.parse(r.supported_countries);
+                } catch (e) {
+                    r.supported_countries = [];
+                }
+            }
+            return r;
+        });
+
+        return NextResponse.json(results);
     } catch (error: any) {
         return NextResponse.json({ error: error.message }, { status: 500 });
     }
