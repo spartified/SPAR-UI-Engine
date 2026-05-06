@@ -9,11 +9,8 @@ const schema = schemaRaw as any;
 
 export async function GET(req: NextRequest) {
     const auth = await authenticateApiRequest(req);
-    if (!auth.authorized || !auth.permissions.includes('orion:aggregator:manage')) {
-        return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
-    }
-    if (auth.accountId !== 1 && !auth.permissions.includes('admin')) {
-        return NextResponse.json({ error: "Unauthorized. Root access only." }, { status: 403 });
+    if (!auth.authorized) {
+        return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
     try {
