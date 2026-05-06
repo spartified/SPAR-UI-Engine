@@ -28,10 +28,14 @@ export async function GET(req: NextRequest, { params }: { params: { accountId: s
                 }
             }
 
-            // Fetch Packages for the specific account
+            // Resolve hierarchy for the target account to include all sub-accounts
+            const { getAccountHierarchy } = await import("@/core/utils/hierarchy");
+            const targetHierarchy = await getAccountHierarchy(Number(accountId));
+
+            // Fetch Packages for the specific account and its sub-accounts
             const [rows]: any = await pool.execute(
-                `SELECT * FROM package_templates WHERE aggregator_account_id = ? OR 1=1`,
-                [accountId] as any[]
+                `SELECT * FROM package_templates WHERE account_id IN (${targetHierarchy.join(',')})`,
+                []
             );
 
             return NextResponse.json(rows);
